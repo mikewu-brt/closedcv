@@ -1,4 +1,4 @@
-'''
+"""
  * Copyright (c) 2018, The LightCo
  * All rights reserved.
  * Redistribution and use in source and binary forms, with or without
@@ -13,7 +13,7 @@
  *  test rig version 1
  *
  ******************************************************************************/
-'''
+"""
 from libs.Optical import *
 
 sensor_type = "IMX265"
