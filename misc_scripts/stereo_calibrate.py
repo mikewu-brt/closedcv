@@ -95,7 +95,7 @@ if process_image_files:
                 if show_images:
                     img2 = cv2.drawChessboardCorners(img, (nx, ny), corners2[cam_idx,:-1], ret)
                     img2 = cv2.resize(img2, None, fx=1/4, fy=1/4)
-                    cv2.imshow('Image {}'.format(cam_idx), img2)
+                    cv2.imshow("Image {}".format(cam_idx), img2)
                     cv2.waitKey(500)
             else:
                 chessboard_found = False
@@ -112,6 +112,10 @@ if process_image_files:
                 imgpoints = np.concatenate((imgpoints, corners2), axis=1)
         else:
             print("Chessboard not found in {}".format(fname))
+            if show_images:
+                img2 = cv2.resize(img, None, fx=1/4, fy=1/4)
+                cv2.imshow("Bad Image {}".format(cam_idx), img2)
+                cv2.waitKey(500)
 
         orientation += 1
 
@@ -164,7 +168,7 @@ for cam_idx in range(num_cam):
     if cam_idx == 0:
         for i in range(imgpoints.shape[1]):
             imgpts_ref.append(imgpoints[cam_idx, i, :, :, :].astype(np.float32))
-            imgpts.append(imgpts_ref[0])
+            imgpts.append(imgpts_ref[i])
     else:
         for i in range(imgpoints.shape[1]):
             imgpts.append(imgpoints[cam_idx, i, :, :, :].astype(np.float32))
