@@ -29,10 +29,12 @@ fl_mm = 3.95
 pixel_size_um = 1.25
 
 # Relative camera positions in meters (Initial guess)
-cam_position_m = np.array([[0, 0, 0], [0.03, 0, 0]])
+#cam_position_m = np.array([[0, 0, 0], [0.03, 0, 0]])
+cam_position_m = np.array([[0, 0, 0], [1.027, 0, 0]])
 
 # Capture images file names
-image_dir = "cal_072519_1"
+#image_dir = "cal_072519_1"
+image_dir = "cal_073019_0"
 image_filename = np.array(["left{}_0.npy", "right{}_0.npy"])
 
 # Checkerboard info
@@ -45,7 +47,9 @@ criteria = (cv2.TERM_CRITERIA_EPS + cv2.TERM_CRITERIA_MAX_ITER, 30, 0.001)
 
 # Misc control
 show_images = True
-process_image_files = True
+process_image_files = False
+use_fixed_focal_lenght = True
+estimate_distortion = True
 
 ######################
 
@@ -139,12 +143,13 @@ R_guess = np.identity(3)
 i_flags = cv2.CALIB_RATIONAL_MODEL
 i_flags |= cv2.CALIB_USE_INTRINSIC_GUESS
 i_flags |= cv2.CALIB_ZERO_TANGENT_DIST
-i_flags |= cv2.CALIB_FIX_K1
-i_flags |= cv2.CALIB_FIX_K2
-i_flags |= cv2.CALIB_FIX_K3
-i_flags |= cv2.CALIB_FIX_K4
-i_flags |= cv2.CALIB_FIX_K5
-i_flags |= cv2.CALIB_FIX_K6
+if not estimate_distortion:
+    i_flags |= cv2.CALIB_FIX_K1
+    i_flags |= cv2.CALIB_FIX_K2
+    i_flags |= cv2.CALIB_FIX_K3
+    i_flags |= cv2.CALIB_FIX_K4
+    i_flags |= cv2.CALIB_FIX_K5
+    i_flags |= cv2.CALIB_FIX_K6
 
 e_flags = cv2.CALIB_FIX_INTRINSIC
 e_flags |= cv2.CALIB_RATIONAL_MODEL
@@ -172,7 +177,26 @@ for cam_idx in range(num_cam):
     else:
         for i in range(imgpoints.shape[1]):
             imgpts.append(imgpoints[cam_idx, i, :, :, :].astype(np.float32))
+
     ret, K1, D1, rvecs1, tvecs1 = cv2.calibrateCamera(objpoints, imgpts, imgshape, K_guess, None, flags=i_flags)
+
+    if use_fixed_focal_lenght:
+        # Fix focal length and recompute the principle point
+        fl_comp = (K1[0,0] + K1[1,1]) / 2.0
+        K1[0,0] = fl_comp
+        K1[1,1] = fl_comp
+
+        fl_flags = i_flags
+        fl_flags |= cv2.CALIB_FIX_K1
+        fl_flags |= cv2.CALIB_FIX_K2
+        fl_flags |= cv2.CALIB_FIX_K3
+        fl_flags |= cv2.CALIB_FIX_K4
+        fl_flags |= cv2.CALIB_FIX_K5
+        fl_flags |= cv2.CALIB_FIX_K6
+        fl_flags |= cv2.CALIB_FIX_FOCAL_LENGTH
+
+        ret, K1, D1, rvecs1, tvecs1 = cv2.calibrateCamera(objpoints, imgpts, imgshape, K1, D1, flags=fl_flags)
+
     K.append(K1)
     D.append(D1)
 
@@ -191,6 +215,10 @@ for cam_idx in range(num_cam):
     print("")
     print("Camera Matrix:")
     print(K1)
+
+    print("")
+    print("Distortion Vector:")
+    print(D1)
 
     if cam_idx != 0:
         T_guess = np.matmul(R_guess, -cam_position_m[cam_idx].reshape(3,1))

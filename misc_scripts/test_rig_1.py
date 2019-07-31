@@ -24,7 +24,7 @@ v_pixels = 1542
 f_num = 2
 lens_fl_mm = 12
 
-obj_dist_mm = 50 * 1000
+obj_dist_mm = 100 * 1000
 
 optical = Optical(h_pixels, v_pixels, pixel_size_um, f_num, lens_fl_mm)
 sensor = optical.sensor
@@ -48,8 +48,8 @@ print("Optical FOV - hfov: {:.2f} deg, vfov: {:.2f} deg, dfov: {:.2f}".format(
 
 obj_res = optical.object_space_resolution(obj_dist_mm)
 print("")
-print("Pixel size at {} m: {:.2f} mm, {:.2f} lp/mm".format(obj_dist_mm / 1000,
-                           obj_res['pixel_mm'], obj_res['lp_mm']))
+print("Pixel size at {} m: {:.2f} mm, {:.2f} lp/mm, {:.2f} lp/m".format(obj_dist_mm / 1000,
+                           obj_res['pixel_mm'], obj_res['lp_mm'], obj_res['lp_mm'] * 1000))
 print("Scene size at {} m: {:.2f} x {:.2f} (m)".format(obj_dist_mm / 1000,
                            obj_res['h_mm'] / 1000, obj_res['v_mm'] / 1000))
 
