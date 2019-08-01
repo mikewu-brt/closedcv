@@ -48,7 +48,7 @@ criteria = (cv2.TERM_CRITERIA_EPS + cv2.TERM_CRITERIA_MAX_ITER, 30, 0.001)
 # Misc control
 show_images = True
 process_image_files = False
-use_fixed_focal_lenght = True
+force_fx_eq_fy = True
 estimate_distortion = True
 
 ######################
@@ -140,9 +140,8 @@ K_guess = np.array([[f, 0, imgshape[0]/2], [0, f, imgshape[1]/2], [0, 0, 1]])
 
 R_guess = np.identity(3)
 
-i_flags = cv2.CALIB_RATIONAL_MODEL
-i_flags |= cv2.CALIB_USE_INTRINSIC_GUESS
-i_flags |= cv2.CALIB_ZERO_TANGENT_DIST
+i_flags = cv2.CALIB_USE_INTRINSIC_GUESS
+#i_flags |= cv2.CALIB_ZERO_TANGENT_DIST
 if not estimate_distortion:
     i_flags |= cv2.CALIB_FIX_K1
     i_flags |= cv2.CALIB_FIX_K2
@@ -150,10 +149,11 @@ if not estimate_distortion:
     i_flags |= cv2.CALIB_FIX_K4
     i_flags |= cv2.CALIB_FIX_K5
     i_flags |= cv2.CALIB_FIX_K6
+if force_fx_eq_fy:
+    i_flags |= cv2.CALIB_FIX_ASPECT_RATIO
 
 e_flags = cv2.CALIB_FIX_INTRINSIC
-e_flags |= cv2.CALIB_RATIONAL_MODEL
-e_flags |= cv2.CALIB_ZERO_TANGENT_DIST
+#e_flags |= cv2.CALIB_ZERO_TANGENT_DIST
 e_flags |= cv2.CALIB_FIX_K1
 e_flags |= cv2.CALIB_FIX_K2
 e_flags |= cv2.CALIB_FIX_K3
@@ -178,24 +178,7 @@ for cam_idx in range(num_cam):
         for i in range(imgpoints.shape[1]):
             imgpts.append(imgpoints[cam_idx, i, :, :, :].astype(np.float32))
 
-    ret, K1, D1, rvecs1, tvecs1 = cv2.calibrateCamera(objpoints, imgpts, imgshape, K_guess, None, flags=i_flags)
-
-    if use_fixed_focal_lenght:
-        # Fix focal length and recompute the principle point
-        fl_comp = (K1[0,0] + K1[1,1]) / 2.0
-        K1[0,0] = fl_comp
-        K1[1,1] = fl_comp
-
-        fl_flags = i_flags
-        fl_flags |= cv2.CALIB_FIX_K1
-        fl_flags |= cv2.CALIB_FIX_K2
-        fl_flags |= cv2.CALIB_FIX_K3
-        fl_flags |= cv2.CALIB_FIX_K4
-        fl_flags |= cv2.CALIB_FIX_K5
-        fl_flags |= cv2.CALIB_FIX_K6
-        fl_flags |= cv2.CALIB_FIX_FOCAL_LENGTH
-
-        ret, K1, D1, rvecs1, tvecs1 = cv2.calibrateCamera(objpoints, imgpts, imgshape, K1, D1, flags=fl_flags)
+    ret, K1, D1, rvecs1, tvecs1 = cv2.calibrateCamera(objpoints, imgpts, imgshape, K_guess.copy(), None, flags=i_flags)
 
     K.append(K1)
     D.append(D1)
@@ -223,7 +206,7 @@ for cam_idx in range(num_cam):
     if cam_idx != 0:
         T_guess = np.matmul(R_guess, -cam_position_m[cam_idx].reshape(3,1))
         ret, K1, D1, K2, D2, R1, T1, E, F, viewErr = cv2.stereoCalibrateExtended(objpoints, imgpts_ref, imgpts,
-                                  K[0], D[0], K[cam_idx], D[cam_idx], imgshape, R_guess, T_guess, flags=e_flags)
+                                  K[0], D[0], K[cam_idx], D[cam_idx], imgshape, R_guess.copy(), T_guess, flags=e_flags)
         R.append(R1)
         T.append(T1)
 
