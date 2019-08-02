@@ -17,6 +17,7 @@ import cv2
 import numpy as np
 import os
 import matplotlib as matplot
+from misc_scripts.mag_calibrate import *
 matplot.use('TkAgg')
 import matplotlib.pyplot as plt
 
@@ -33,9 +34,13 @@ pixel_size_um = 1.25
 cam_position_m = np.array([[0, 0, 0], [1.027, 0, 0]])
 
 # Capture images file names
-#image_dir = "cal_072519_1"
+mag_image_dir = "cal_mag_080219_0"
 image_dir = "cal_073019_0"
 image_filename = np.array(["left{}_0.npy", "right{}_0.npy"])
+
+K_mag = mag_calib(mag_image_dir, image_filename)
+for cam_idx in range(len(K_mag)):
+    print("FL Cam {}: {} mm".format(cam_idx, K_mag[cam_idx][0,0] * pixel_size_um / 1000.0))
 
 # Checkerboard info
 nx = 17
@@ -48,7 +53,6 @@ criteria = (cv2.TERM_CRITERIA_EPS + cv2.TERM_CRITERIA_MAX_ITER, 30, 0.001)
 # Misc control
 show_images = True
 process_image_files = False
-force_fx_eq_fy = True
 estimate_distortion = True
 
 ######################
@@ -141,6 +145,7 @@ K_guess = np.array([[f, 0, imgshape[0]/2], [0, f, imgshape[1]/2], [0, 0, 1]])
 R_guess = np.identity(3)
 
 i_flags = cv2.CALIB_USE_INTRINSIC_GUESS
+i_flags |= cv2.CALIB_FIX_FOCAL_LENGTH
 if not estimate_distortion:
     i_flags |= cv2.CALIB_ZERO_TANGENT_DIST
     i_flags |= cv2.CALIB_FIX_K1
@@ -149,8 +154,6 @@ if not estimate_distortion:
     i_flags |= cv2.CALIB_FIX_K4
     i_flags |= cv2.CALIB_FIX_K5
     i_flags |= cv2.CALIB_FIX_K6
-if force_fx_eq_fy:
-    i_flags |= cv2.CALIB_FIX_ASPECT_RATIO
 
 e_flags = cv2.CALIB_FIX_INTRINSIC
 e_flags |= cv2.CALIB_FIX_TANGENT_DIST
@@ -177,6 +180,9 @@ for cam_idx in range(num_cam):
     else:
         for i in range(imgpoints.shape[1]):
             imgpts.append(imgpoints[cam_idx, i, :, :, :].astype(np.float32))
+
+    K_guess[0,0] = K_mag[cam_idx][0,0]
+    K_guess[1,1] = K_mag[cam_idx][1,1]
 
     ret, K1, D1, rvecs1, tvecs1 = cv2.calibrateCamera(objpoints, imgpts, imgshape, K_guess.copy(), None, flags=i_flags)
 
