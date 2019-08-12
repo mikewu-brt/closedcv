@@ -18,16 +18,16 @@ import os
 import importlib
 import argparse
 import matplotlib as matplot
-from misc_scripts.mag_calibrate import *
 matplot.use('TkAgg')
 import matplotlib.pyplot as plt
+
 
 ####################
 # Input Parameters
 ####################
+
 parser = argparse.ArgumentParser(description="Stereo Calibrate")
-parser.add_argument('--image_dir', default='cal_073019_0')
-parser.add_argument('--mag_image_dir', default='cal_mag_080219_1')
+parser.add_argument('--image_dir', default='cal_dfk33ux265_08072019')
 
 args, unknown = parser.parse_known_args()
 if unknown:
@@ -44,10 +44,6 @@ pixel_size_um = setupInfo.SensorInfo.pixel_size_um
 # Relative camera positions in meters (Initial guess)
 cam_position_m = setupInfo.RigInfo.cam_position_m
 
-K_mag = mag_calib(args.mag_image_dir)
-for cam_idx in range(len(K_mag)):
-    print("FL Cam {}: {} mm".format(cam_idx, K_mag[cam_idx][0,0] * pixel_size_um / 1000.0))
-
 # Checkerboard info
 nx = setupInfo.ChartInfo.nx
 ny = setupInfo.ChartInfo.ny
@@ -59,7 +55,10 @@ criteria = (cv2.TERM_CRITERIA_EPS + cv2.TERM_CRITERIA_MAX_ITER, 30, 0.001)
 # Misc control
 show_images = True
 process_image_files = True
+force_fx_eq_fy = True
 estimate_distortion = True
+
+display_size = 1/2
 
 ######################
 
@@ -79,7 +78,10 @@ objp[:,:2] = np.mgrid[0:nx,0:ny].T.reshape(-1,2) * (checker_size_mm * 1.0e-3)
 # Arrays to store object points and image points from all the images.
 #objpoints = np.empty((1, nx*ny, 3))                 # 3D points in World space (relative)
 objpoints = []                  # 3D points in World space (relative)
-imgpoints = np.empty((num_cam, 1, nx*ny, 1, 2))     # Image points
+extrinsic_pts = np.empty((num_cam, 1, nx * ny, 1, 2))     # Image points
+intrinsic_pts = []
+for cam_idx in range(num_cam):
+    intrinsic_pts.append([])
 
 corners2 = np.empty((num_cam, 1, nx*ny, 1, 2))
 all_files_read = False
@@ -106,28 +108,28 @@ if process_image_files:
             if ret:
                 print("Search Done")
                 corners2[cam_idx, 0, :, :, :] = cv2.cornerSubPix(gray, corners, (11, 11), (-1, -1), criteria)
+                intrinsic_pts[cam_idx].append(corners2[cam_idx, 0].copy())
                 if show_images:
-                    img2 = cv2.drawChessboardCorners(img, (nx, ny), corners2[cam_idx, 0].astype(np.float32), ret)
-                    img2 = cv2.resize(img2, None, fx=1/4, fy=1/4)
+                    img2 = cv2.drawChessboardCorners(img, (nx, ny), corners2[cam_idx, 0].astype(np.float32), True)
+                    img2 = cv2.resize(img2, None, fx=display_size, fy=display_size)
                     cv2.imshow("Image {}".format(cam_idx), img2)
                     cv2.waitKey(500)
             else:
+                print("Chessboard not found in {}".format(fname))
                 chessboard_found = False
-                break
 
         if all_files_read:
             break
         elif chessboard_found:
             # Add points to arrays
-            objpoints.append(objp)
-            if orientation == 0:
-                imgpoints = corners2.copy()
+            if len(objpoints) == 0:
+                extrinsic_pts = corners2.copy()
             else:
-                imgpoints = np.concatenate((imgpoints, corners2), axis=1)
+                extrinsic_pts = np.concatenate((extrinsic_pts, corners2.copy()), axis=1)
+            objpoints.append(objp)
         else:
-            print("Chessboard not found in {}".format(fname))
             if show_images:
-                img2 = cv2.resize(img, None, fx=1/4, fy=1/4)
+                img2 = cv2.resize(img, None, fx=display_size, fy=display_size)
                 cv2.imshow("Bad Image {}".format(cam_idx), img2)
                 cv2.waitKey(500)
 
@@ -135,11 +137,11 @@ if process_image_files:
 
     imgshape = gray.shape[::-1]
     np.save(os.path.join(args.image_dir, "objpoints"), objpoints)
-    np.save(os.path.join(args.image_dir, "imgpoints"), imgpoints)
+    np.save(os.path.join(args.image_dir, "extrinsic_pts"), extrinsic_pts)
     np.save(os.path.join(args.image_dir, "img_shape"), imgshape)
 else:
     objpoints = np.load(os.path.join(args.image_dir, "objpoints.npy"))
-    imgpoints = np.load(os.path.join(args.image_dir, "imgpoints.npy"))
+    extrinsic_pts = np.load(os.path.join(args.image_dir, "extrinsic_pts.npy"))
     imgshape = tuple(np.load(os.path.join(args.image_dir, "img_shape.npy")))
 
 
@@ -151,7 +153,6 @@ K_guess = np.array([[f, 0, imgshape[0]/2], [0, f, imgshape[1]/2], [0, 0, 1]])
 R_guess = np.identity(3)
 
 i_flags = cv2.CALIB_USE_INTRINSIC_GUESS
-i_flags |= cv2.CALIB_FIX_FOCAL_LENGTH
 if not estimate_distortion:
     i_flags |= cv2.CALIB_ZERO_TANGENT_DIST
     i_flags |= cv2.CALIB_FIX_K1
@@ -160,6 +161,8 @@ if not estimate_distortion:
     i_flags |= cv2.CALIB_FIX_K4
     i_flags |= cv2.CALIB_FIX_K5
     i_flags |= cv2.CALIB_FIX_K6
+if force_fx_eq_fy:
+    i_flags |= cv2.CALIB_FIX_ASPECT_RATIO
 
 e_flags = cv2.CALIB_FIX_INTRINSIC
 e_flags |= cv2.CALIB_FIX_TANGENT_DIST
@@ -176,28 +179,38 @@ D = []
 R = []
 T = []
 imgpts_ref = []
+view_error = []
 for cam_idx in range(num_cam):
-    print("Compute intrisics for cam {}, type {}".format(cam_idx, setupInfo.SensorInfo.type))
-    imgpts = []
-    if cam_idx == 0:
-        for i in range(imgpoints.shape[1]):
-            imgpts_ref.append(imgpoints[cam_idx, i, :, :, :].astype(np.float32))
-            imgpts.append(imgpts_ref[i])
-    else:
-        for i in range(imgpoints.shape[1]):
-            imgpts.append(imgpoints[cam_idx, i, :, :, :].astype(np.float32))
+    print("Compute intrisics for cam {}".format(cam_idx))
+    print("   Sensor Type: {}".format(setupInfo.SensorInfo.type))
+    print("   Sensor Pixel Size (um): {}".format(pixel_size_um))
+    print("   Focal Length (mm): {}".format(fl_mm))
+    print("   Chart: {}".format(setupInfo.ChartInfo.name))
 
-    K_guess[0,0] = K_mag[cam_idx][0,0]
-    K_guess[1,1] = K_mag[cam_idx][1,1]
+    # Intrinsic data
+    obj_pts = []
+    img_pts = []
+    for capture_idx in range(len(intrinsic_pts[cam_idx])):
+        obj_pts.append(objp)
+        img_pts.append(intrinsic_pts[cam_idx][capture_idx].astype(np.float32))
 
-    ret, K1, D1, rvecs1, tvecs1 = cv2.calibrateCamera(objpoints, imgpts, imgshape, K_guess.copy(), None, flags=i_flags)
-
+    ret, K1, D1, rvecs1, tvecs1 = cv2.calibrateCamera(obj_pts, img_pts, imgshape, K_guess.copy(), None, flags=i_flags)
     K.append(K1)
     D.append(D1)
 
+
+    # Extrinsic data
+    imgpts = []
+    if cam_idx == 0:
+        for i in range(extrinsic_pts.shape[1]):
+            imgpts_ref.append(extrinsic_pts[cam_idx, i, :, :, :].astype(np.float32))
+    else:
+        for i in range(extrinsic_pts.shape[1]):
+            imgpts.append(extrinsic_pts[cam_idx, i, :, :, :].astype(np.float32))
+
     print("")
     print("")
-    print("Camera {}".format(cam_idx))
+    print("Camera {} - {}".format(cam_idx, setupInfo.SensorInfo.type))
     print("")
     print("Principle point: ({:.2f}, {:.2f}) - Difference from ideal: ({:.2f}, {:.2f})".format(
         K[cam_idx][0, 2], K[cam_idx][1, 2],
@@ -221,6 +234,7 @@ for cam_idx in range(num_cam):
                                   K[0], D[0], K[cam_idx], D[cam_idx], imgshape, R_guess.copy(), T_guess, flags=e_flags)
         R.append(R1)
         T.append(T1)
+        view_error.append(viewErr)
 
         print("")
         print("Rotation Matrix:")

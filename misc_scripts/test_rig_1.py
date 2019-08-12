@@ -12,7 +12,6 @@
  *  Test script to compute various optical parameters related to the depth
  *  test rig version 1
  *
- ******************************************************************************/
 """
 from libs.Optical import *
 

@@ -11,30 +11,27 @@
  * @brief
  *  Stereo calibration test script
  *
- ******************************************************************************/
 """
 import cv2
 import numpy as np
 import os
-import sys
+import importlib
 import matplotlib as matplot
 matplot.use('TkAgg')
 import matplotlib.pyplot as plt
 
-def mag_calib(image_dir, image_filename):
+def mag_calib(image_dir):
 
-    ####################
-    # Input Parameters
-    ####################
+    setupInfo = importlib.import_module("{}.setup".format(image_dir))
 
     # Optical parameters
-    fl_mm = 3.95
-    pixel_size_um = 1.25
+    fl_mm = setupInfo.LensInfo.fl_mm
+    pixel_size_um = setupInfo.SensorInfo.pixel_size_um
 
     # Checkerboard info
-    nx = 17
-    ny = 11
-    checker_size_mm = 280 / 13
+    nx = setupInfo.ChartInfo.nx
+    ny = setupInfo.ChartInfo.ny
+    checker_size_mm = setupInfo.ChartInfo.size_mm
 
     # Termination criteria
     criteria = (cv2.TERM_CRITERIA_EPS + cv2.TERM_CRITERIA_MAX_ITER, 30, 0.001)
@@ -44,9 +41,7 @@ def mag_calib(image_dir, image_filename):
     process_image_files = True
     force_fx_eq_fy = True
 
-    ######################
-
-    num_cam = image_filename.shape[0]
+    num_cam = setupInfo.RigInfo.image_filename.shape[0]
 
     # Open a figure to avoid cv2.imshow crash
     plt.figure(1)
@@ -68,7 +63,7 @@ def mag_calib(image_dir, image_filename):
             chessboard_found = True
             # Load images
             for cam_idx in range(num_cam):
-                fname = os.path.join(image_dir, image_filename[cam_idx].format(orientation))
+                fname = os.path.join(image_dir, setupInfo.RigInfo.image_filename[cam_idx].format(orientation))
                 try:
                     raw = np.load(fname)
                 except:

@@ -11,50 +11,59 @@
  * @brief
  *  Stereo calibration test script
  *
- ******************************************************************************/
 """
 import cv2
 import numpy as np
 import os
+import importlib
+import argparse
 import matplotlib as matplot
 matplot.use('TkAgg')
 import matplotlib.pyplot as plt
+
 
 ####################
 # Input Parameters
 ####################
 
+parser = argparse.ArgumentParser(description="Stereo Calibrate")
+parser.add_argument('--image_dir', default='cal_dfk33ux265_08072019')
+
+args, unknown = parser.parse_known_args()
+if unknown:
+    print("Unknown options: {}".format(unknown))
+
+####################
+
+setupInfo = importlib.import_module("{}.setup".format(args.image_dir))
+
 # Optical parameters
-fl_mm = 3.95
-pixel_size_um = 1.25
+fl_mm = setupInfo.LensInfo.fl_mm
+pixel_size_um = setupInfo.SensorInfo.pixel_size_um
 
 # Relative camera positions in meters (Initial guess)
-#cam_position_m = np.array([[0, 0, 0], [0.03, 0, 0]])
-cam_position_m = np.array([[0, 0, 0], [1.027, 0, 0]])
-
-# Capture images file names
-#image_dir = "cal_072519_1"
-image_dir = "cal_073019_0"
-image_filename = np.array(["left{}_0.npy", "right{}_0.npy"])
+cam_position_m = setupInfo.RigInfo.cam_position_m
 
 # Checkerboard info
-nx = 17
-ny = 11
-checker_size_mm = 280 / 13
+nx = setupInfo.ChartInfo.nx
+ny = setupInfo.ChartInfo.ny
+checker_size_mm = setupInfo.ChartInfo.size_mm
 
 # Termination criteria
 criteria = (cv2.TERM_CRITERIA_EPS + cv2.TERM_CRITERIA_MAX_ITER, 30, 0.001)
 
 # Misc control
 show_images = True
-process_image_files = False
+process_image_files = True
 force_fx_eq_fy = True
 estimate_distortion = True
+
+display_size = 1/2
 
 ######################
 
 num_cam = cam_position_m.shape[0]
-if num_cam != image_filename.shape[0]:
+if num_cam != setupInfo.RigInfo.image_filename.shape[0]:
     print("Number of camera positions and number of filenames must match")
     exit(1)
 
@@ -79,7 +88,7 @@ if process_image_files:
         chessboard_found = True
         # Load images
         for cam_idx in range(num_cam):
-            fname = os.path.join(image_dir, image_filename[cam_idx].format(orientation))
+            fname = os.path.join(args.image_dir, setupInfo.RigInfo.image_filename[cam_idx].format(orientation))
             try:
                 raw = np.load(fname)
             except:
@@ -97,8 +106,8 @@ if process_image_files:
                 print("Search Done")
                 corners2[cam_idx, 0, :, :, :] = cv2.cornerSubPix(gray, corners, (11, 11), (-1, -1), criteria)
                 if show_images:
-                    img2 = cv2.drawChessboardCorners(img, (nx, ny), corners2[cam_idx,:-1], ret)
-                    img2 = cv2.resize(img2, None, fx=1/4, fy=1/4)
+                    img2 = cv2.drawChessboardCorners(img, (nx, ny), corners2[cam_idx, 0].astype(np.float32), ret)
+                    img2 = cv2.resize(img2, None, fx=display_size, fy=display_size)
                     cv2.imshow("Image {}".format(cam_idx), img2)
                     cv2.waitKey(500)
             else:
@@ -113,24 +122,24 @@ if process_image_files:
             if orientation == 0:
                 imgpoints = corners2.copy()
             else:
-                imgpoints = np.concatenate((imgpoints, corners2), axis=1)
+                imgpoints = np.concatenate((imgpoints, corners2.copy()), axis=1)
         else:
             print("Chessboard not found in {}".format(fname))
             if show_images:
-                img2 = cv2.resize(img, None, fx=1/4, fy=1/4)
+                img2 = cv2.resize(img, None, fx=display_size, fy=display_size)
                 cv2.imshow("Bad Image {}".format(cam_idx), img2)
                 cv2.waitKey(500)
 
         orientation += 1
 
     imgshape = gray.shape[::-1]
-    np.save(os.path.join(image_dir, "objpoints"), objpoints)
-    np.save(os.path.join(image_dir, "imgpoints"), imgpoints)
-    np.save(os.path.join(image_dir, "img_shape"), imgshape)
+    np.save(os.path.join(args.image_dir, "objpoints"), objpoints)
+    np.save(os.path.join(args.image_dir, "imgpoints"), imgpoints)
+    np.save(os.path.join(args.image_dir, "img_shape"), imgshape)
 else:
-    objpoints = np.load(os.path.join(image_dir, "objpoints.npy"))
-    imgpoints = np.load(os.path.join(image_dir, "imgpoints.npy"))
-    imgshape = tuple(np.load(os.path.join(image_dir, "img_shape.npy")))
+    objpoints = np.load(os.path.join(args.image_dir, "objpoints.npy"))
+    imgpoints = np.load(os.path.join(args.image_dir, "imgpoints.npy"))
+    imgshape = tuple(np.load(os.path.join(args.image_dir, "img_shape.npy")))
 
 
 print("")
@@ -167,8 +176,13 @@ D = []
 R = []
 T = []
 imgpts_ref = []
+view_error = []
 for cam_idx in range(num_cam):
     print("Compute intrisics for cam {}".format(cam_idx))
+    print("   Sensor Type: {}".format(setupInfo.SensorInfo.type))
+    print("   Sensor Pixel Size (um): {}".format(pixel_size_um))
+    print("   Focal Length (mm): {}".format(fl_mm))
+    print("   Chart: {}".format(setupInfo.ChartInfo.name))
     imgpts = []
     if cam_idx == 0:
         for i in range(imgpoints.shape[1]):
@@ -185,7 +199,7 @@ for cam_idx in range(num_cam):
 
     print("")
     print("")
-    print("Camera {}".format(cam_idx))
+    print("Camera {} - {}".format(cam_idx, setupInfo.SensorInfo.type))
     print("")
     print("Principle point: ({:.2f}, {:.2f}) - Difference from ideal: ({:.2f}, {:.2f})".format(
         K[cam_idx][0, 2], K[cam_idx][1, 2],
@@ -209,6 +223,7 @@ for cam_idx in range(num_cam):
                                   K[0], D[0], K[cam_idx], D[cam_idx], imgshape, R_guess.copy(), T_guess, flags=e_flags)
         R.append(R1)
         T.append(T1)
+        view_error.append(viewErr)
 
         print("")
         print("Rotation Matrix:")
@@ -228,7 +243,7 @@ for cam_idx in range(num_cam):
 
 
 # Save results
-np.save(os.path.join(image_dir, "D"), D)
-np.save(os.path.join(image_dir, "K"), K)
-np.save(os.path.join(image_dir, "R"), R)
-np.save(os.path.join(image_dir, "T"), T)
+np.save(os.path.join(args.image_dir, "D"), D)
+np.save(os.path.join(args.image_dir, "K"), K)
+np.save(os.path.join(args.image_dir, "R"), R)
+np.save(os.path.join(args.image_dir, "T"), T)
