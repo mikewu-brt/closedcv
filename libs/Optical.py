@@ -1,4 +1,17 @@
-# Optics formulas
+"""
+ * Copyright (c) 2018, The LightCo
+ * All rights reserved.
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are strictly prohibited without prior permission of
+ * The LightCo.
+ *
+ * @author  Chuck Stanski
+ * @version V1.0.0
+ * @date    July 2019
+ * @brief
+ *  Stereo calibration test script
+ *
+"""
 import math
 
 
@@ -40,9 +53,6 @@ class Lens:
 
     def focal_length_mm(self):
         return self.fl_mm
-
-    def hyper_focal_dist_mm(self, coc_mm=0.030):
-        return self.fl_mm * self.fl_mm / self.f_num / coc_mm + self.fl_mm
 
     def depth_of_field_mm(self, object_dist_mm, coc_mm=0.030):
         H_mm = self.hyper_focal_dist_mm(coc_mm)
@@ -105,3 +115,7 @@ class Optical:
 
         return dict([('lp_mm', obj_lp_mm), ('pixel_mm', obj_pixel_size_mm),
                      ('h_mm', scene_h), ('v_mm', scene_v)])
+
+    def hyper_focal_dist_mm(self, coc_pixels=1.0):
+        coc_mm = coc_pixels * self.sensor.pixel_size_um() * 1.0e-3
+        return self.lens.fl_mm * self.lens.fl_mm / self.lens.f_num / coc_mm + self.lens.fl_mm
