@@ -52,4 +52,5 @@ print("Pixel size at {} m: {:.2f} mm, {:.2f} lp/mm, {:.2f} lp/m".format(obj_dist
 print("Scene size at {} m: {:.2f} x {:.2f} (m)".format(obj_dist_mm / 1000,
                            obj_res['h_mm'] / 1000, obj_res['v_mm'] / 1000))
 
-print("Hyper focal distance: {:.2f} m".format(optical.hyper_focal_dist_mm() / 1000))
+print("Hyper focal distance: {:.2f} m for 1 pixel CoC".format(optical.hyper_focal_dist_mm(1.0) / 1000))
+print("Hyper focal distance: {:.2f} m for 3 pixel CoC".format(optical.hyper_focal_dist_mm(3.0) / 1000))

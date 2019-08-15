@@ -153,6 +153,7 @@ K_guess = np.array([[f, 0, imgshape[0]/2], [0, f, imgshape[1]/2], [0, 0, 1]])
 R_guess = np.identity(3)
 
 i_flags = cv2.CALIB_USE_INTRINSIC_GUESS
+i_flags |= cv2.CALIB_ZERO_TANGENT_DIST
 if not estimate_distortion:
     i_flags |= cv2.CALIB_ZERO_TANGENT_DIST
     i_flags |= cv2.CALIB_FIX_K1
