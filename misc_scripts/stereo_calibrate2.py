@@ -181,6 +181,7 @@ T = []
 imgpts_ref = []
 view_error = []
 for cam_idx in range(num_cam):
+    print("")
     print("Compute intrisics for cam {}".format(cam_idx))
     print("   Sensor Type: {}".format(setupInfo.SensorInfo.type))
     print("   Sensor Pixel Size (um): {}".format(pixel_size_um))
@@ -246,7 +247,7 @@ for cam_idx in range(num_cam):
 
         c = np.matmul(-np.linalg.inv(R1), T1)
         print("")
-        print("World coordinate of 2nd camera (m)")
+        print("World coordinate of camera {} (m)".format(cam_idx))
         print(c)
     else:
         R.append(np.identity(3))
