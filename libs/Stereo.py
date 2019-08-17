@@ -95,6 +95,11 @@ class Stereo:
         E = np.matmul(np.matmul(K2.transpose(), F, K1))
         return E
 
+    @staticmethod
+    def compute_projection_matrix(K, R, T):
+        P = np.hstack((np.matmul(K, R), T))
+        return P
+
     def fundamental_matrix(self):
         return Stereo.compute_fundamental_matrix(self.__K[0], self.__K[1], self.__R[1], self.__T[1])
 
@@ -109,8 +114,7 @@ class Stereo:
         :param cam_idx: Camera Index
         :return P: Projection Matrix
         """
-        P = np.hstack((np.matmul(self.__K[cam_idx], self.__R[cam_idx]), self.__T[cam_idx]))
-        return P
+        return Stereo.compute_projection_matrix(self.__K[cam_idx], self.__R[cam_idx], self.__T[cam_idx])
 
     def compute_distance_disparity(self, img_pts):
         """

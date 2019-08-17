@@ -17,6 +17,7 @@ import argparse
 from libs.Stereo import *
 import matplotlib as matplot
 matplot.use('TkAgg')
+from mpl_toolkits.mplot3d import Axes3D
 import matplotlib.pyplot as plt
 
 ####################
@@ -31,6 +32,9 @@ if unknown:
     print("Unknown options: {}".format(unknown))
 
 ####################
+plt.figure(100).clear()
+ax_all = plt.axes(projection='3d')
+plt.title("All Camera / Orientations")
 
 # Termination criteria
 criteria = (cv2.TERM_CRITERIA_EPS + cv2.TERM_CRITERIA_MAX_ITER, 30, 0.001)
@@ -94,10 +98,25 @@ while True:
             u = reproj_err_vect.reshape(-1, 2)[:, 0]
             v = reproj_err_vect.reshape(-1, 2)[:, 1]
             q = plt.quiver(x, y, u, v, pivot='tip')
-            plt.title("Reprojection Error - Camera {}, Orientation {}, Distance {:.2f}".format(cam_idx, orientation,
+            plt.title("Reprojection Error - Camera {}, Orientation {}, Distance {:.2f} m".format(cam_idx, orientation,
                                                                                            np.average(distance)))
-            plt.xlabel("Avg pixel error: {:.2f}, Avg X {:.2f}, Avg Y {:.2f}".format(reproj_err, reproj_xy_err[0, 0],
+            plt.xlabel("Avg pixel error: {:.2f}, Avg (X, Y): {:.2f}, {:.2f}".format(reproj_err, reproj_xy_err[0, 0],
                                                                                     reproj_xy_err[0, 1]))
+
+            # 3D scatter plots
+            plt.figure(100+orientation*(num_cam-1)+cam_idx).clear()
+            ax = plt.axes(projection='3d')
+            ax.scatter3D(-distance[0], x, -y)
+            ax.set_xlabel("Distance (m)")
+            ax.set_ylabel("X (pixel)")
+            ax.set_zlabel("Y (pixel)")
+            plt.title("Camera {}, Orientation {}".format(cam_idx, orientation))
+
+            # Add all to same plot
+            ax_all.scatter3D(-distance[0], x, -y)
+            ax_all.set_xlabel("Distance (m)")
+            ax_all.set_ylabel("X (pixel)")
+            ax_all.set_zlabel("Y (pixel)")
     else:
         print("Chessboard not found in {}".format(fname))
 
