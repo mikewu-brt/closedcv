@@ -42,6 +42,8 @@ path_to_image_dir = os.getenv("PATH_TO_IMAGE_DIR")
 if path_to_image_dir == None:
     path_to_image_dir = '.'
 
+num_npy_files = setupInfo.RigInfo.num_npy_files
+
 
 # Optical parameters
 fl_mm = setupInfo.LensInfo.fl_mm
@@ -88,28 +90,36 @@ extrinsic_pts = np.empty((num_cam, 1, nx * ny, 1, 2))     # Image points
 intrinsic_pts = []
 for cam_idx in range(num_cam):
     intrinsic_pts.append([])
-#chessboard_detect_np = np.zeros((num_cam,max_num_files))
-chessboard_detect = []
-for cam_idx in range(num_cam):
-    chessboard_detect.append([])
 
 corners2 = np.empty((num_cam, 1, nx*ny, 1, 2))
 all_files_read = False
 orientation = 0
+
+#chessboard_detect_np = np.zeros((num_cam,max_num_files))
+chessboard_detect = []
+for cam_idx in range(num_cam):
+    chessboard_detect.append([])
+num_files_read = 0
 num_files_missing = 0
 if process_image_files:
-    while True:
+    #while True:
+    while num_files_read < num_npy_files:
         chessboard_found = True
-        # Load imageos
+        # Load images
         for cam_idx in range(num_cam):
             fname = os.path.join(path_to_image_dir,args.image_dir, setupInfo.RigInfo.image_filename[cam_idx].format(orientation))
             raw  = []
             try:
                 raw = np.load(fname)
             except:
-                all_files_read = True
-                break
+                num_files_missing += 1
+                chessboard_found = False
+                chessboard_detect[cam_idx].append(False)
+                continue
+                #all_files_read = True
+                #break
 
+            num_files_read += 1
             raw = raw.astype(np.float32) * 256.0 / 1024.0
             raw = raw.astype(np.uint8)
             gray = cv2.cvtColor(raw, cv2.COLOR_BayerBG2GRAY)

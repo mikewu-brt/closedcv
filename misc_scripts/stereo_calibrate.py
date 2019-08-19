@@ -20,6 +20,8 @@ import argparse
 import matplotlib as matplot
 matplot.use('TkAgg')
 import matplotlib.pyplot as plt
+import sys
+import math
 
 
 ####################
@@ -36,6 +38,11 @@ if unknown:
 ####################
 
 setupInfo = importlib.import_module("{}.setup".format(args.image_dir))
+
+# check if env variable PATH_TO_IMAGE_DIR is set, if not use relative path
+path_to_image_dir = os.getenv("PATH_TO_IMAGE_DIR")
+if path_to_image_dir == None:
+    path_to_image_dir = '.'
 
 # Optical parameters
 fl_mm = setupInfo.LensInfo.fl_mm
@@ -77,18 +84,22 @@ objp[:,:2] = np.mgrid[0:nx,0:ny].T.reshape(-1,2) * (checker_size_mm * 1.0e-3)
 
 # Arrays to store object points and image points from all the images.
 #objpoints = np.empty((1, nx*ny, 3))                 # 3D points in World space (relative)
+chessboard_detect = []
 objpoints = []                  # 3D points in World space (relative)
 imgpoints = np.empty((num_cam, 1, nx*ny, 1, 2))     # Image points
 
 corners2 = np.empty((num_cam, 1, nx*ny, 1, 2))
 all_files_read = False
 orientation = 0
+checkerboard_reversal = 0
 if process_image_files:
     while True:
         chessboard_found = True
         # Load images
         for cam_idx in range(num_cam):
-            fname = os.path.join(args.image_dir, setupInfo.RigInfo.image_filename[cam_idx].format(orientation))
+
+            fname = os.path.join(path_to_image_dir,args.image_dir, setupInfo.RigInfo.image_filename[cam_idx].format(orientation))
+            print(fname)
             try:
                 raw = np.load(fname)
             except:
@@ -101,10 +112,12 @@ if process_image_files:
             img = cv2.cvtColor(raw, cv2.COLOR_BayerBG2BGR)
 
             print("Searching {}".format(fname))
-            ret, corners = cv2.findChessboardCorners(gray, (nx, ny), None)
+            #ret, corners = cv2.findChessboardCorners(gray, (nx, ny), None)
+            ret, corners = cv2.findChessboardCornersSB(gray, (nx, ny), None)
             if ret:
                 print("Search Done")
-                corners2[cam_idx, 0, :, :, :] = cv2.cornerSubPix(gray, corners, (11, 11), (-1, -1), criteria)
+                #corners2[cam_idx, 0, :, :, :] = cv2.cornerSubPix(gray, corners, (11, 11), (-1, -1), criteria)
+                corners2[cam_idx, 0, :, :, :] = corners
                 if show_images:
                     img2 = cv2.drawChessboardCorners(img, (nx, ny), corners2[cam_idx, 0].astype(np.float32), ret)
                     img2 = cv2.resize(img2, None, fx=display_size, fy=display_size)
@@ -117,29 +130,40 @@ if process_image_files:
         if all_files_read:
             break
         elif chessboard_found:
-            # Add points to arrays
-            objpoints.append(objp)
-            if orientation == 0:
-                imgpoints = corners2.copy()
+            print("corners2 for ref cam = ", 0, corners2[ 0,0,0,0,:])
+            print("corners2 for aux cam = ", 1, corners2[ 1,0,0,0,:])
+            point0 = corners2[0,0,0,0,:]
+            point1 = corners2[1,0,0,0,:]
+            delta_y = math.fabs(point1[1]-point0[1])/min(point0[1], point1[1])
+            delta_x = math.fabs(point1[0]-point0[0])/min(point0[0], point1[0])
+            if (delta_y > 5.0) or (delta_x > 5.0):
+                print("POSSIBLE CHECKERBOARD REVERSAL in x or  y")
+                checkerboard_reversal += 1
             else:
-                imgpoints = np.concatenate((imgpoints, corners2.copy()), axis=1)
+                # Add points to arrays
+                objpoints.append(objp)
+                if orientation == 0:
+                    imgpoints = corners2.copy()
+                else:
+                    imgpoints = np.concatenate((imgpoints, corners2.copy()), axis=1)
         else:
             print("Chessboard not found in {}".format(fname))
             if show_images:
                 img2 = cv2.resize(img, None, fx=display_size, fy=display_size)
                 cv2.imshow("Bad Image {}".format(cam_idx), img2)
                 cv2.waitKey(500)
-
+        chessboard_detect.append(chessboard_found)
         orientation += 1
 
     imgshape = gray.shape[::-1]
-    np.save(os.path.join(args.image_dir, "objpoints"), objpoints)
-    np.save(os.path.join(args.image_dir, "imgpoints"), imgpoints)
-    np.save(os.path.join(args.image_dir, "img_shape"), imgshape)
+    np.save(os.path.join(path_to_image_dir, args.image_dir, "objpoints"), objpoints)
+    np.save(os.path.join(path_to_image_dir,args.image_dir, "imgpoints"), imgpoints)
+    np.save(os.path.join(path_to_image_dir,args.image_dir, "img_shape"), imgshape)
+    np.save(os.path.join(path_to_image_dir,args.image_dir, "chessboard_detect"), chessboard_detect)
 else:
-    objpoints = np.load(os.path.join(args.image_dir, "objpoints.npy"))
-    imgpoints = np.load(os.path.join(args.image_dir, "imgpoints.npy"))
-    imgshape = tuple(np.load(os.path.join(args.image_dir, "img_shape.npy")))
+    objpoints = np.load(os.path.join(path_to_image_dir,args.image_dir, "objpoints.npy"))
+    imgpoints = np.load(os.path.join(path_to_image_dir,args.image_dir, "imgpoints.npy"))
+    imgshape = tuple(np.load(os.path.join(path_to_image_dir,args.image_dir, "img_shape.npy")))
 
 
 print("")
@@ -149,7 +173,11 @@ K_guess = np.array([[f, 0, imgshape[0]/2], [0, f, imgshape[1]/2], [0, 0, 1]])
 
 R_guess = np.identity(3)
 
-i_flags = cv2.CALIB_USE_INTRINSIC_GUESS
+i_flags = cv2.CALIB_USE_INTRINSIC_GUESS | cv2.CALIB_ZERO_TANGENT_DIST
+i_flags |= cv2.CALIB_FIX_K3
+i_flags |= cv2.CALIB_FIX_K4
+i_flags |= cv2.CALIB_FIX_K5
+i_flags |= cv2.CALIB_FIX_K6
 if not estimate_distortion:
     i_flags |= cv2.CALIB_ZERO_TANGENT_DIST
     i_flags |= cv2.CALIB_FIX_K1
@@ -175,6 +203,8 @@ K = []
 D = []
 R = []
 T = []
+rvecs = []
+tvecs = []
 imgpts_ref = []
 view_error = []
 for cam_idx in range(num_cam):
@@ -196,6 +226,8 @@ for cam_idx in range(num_cam):
 
     K.append(K1)
     D.append(D1)
+    rvecs.append(rvecs1)
+    tvecs.append(tvecs1)
 
     print("")
     print("")
@@ -243,7 +275,9 @@ for cam_idx in range(num_cam):
 
 
 # Save results
-np.save(os.path.join(args.image_dir, "D"), D)
-np.save(os.path.join(args.image_dir, "K"), K)
-np.save(os.path.join(args.image_dir, "R"), R)
-np.save(os.path.join(args.image_dir, "T"), T)
+np.save(os.path.join(path_to_image_dir,args.image_dir, "D"), D)
+np.save(os.path.join(path_to_image_dir,args.image_dir, "K"), K)
+np.save(os.path.join(path_to_image_dir,args.image_dir, "R"), R)
+np.save(os.path.join(path_to_image_dir,args.image_dir, "T"), T)
+np.save(os.path.join(path_to_image_dir,args.image_dir, "tvecs"), tvecs)
+np.save(os.path.join(path_to_image_dir,args.image_dir, "rvecs"), rvecs)

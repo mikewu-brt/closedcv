@@ -20,6 +20,7 @@ class SensorInfo:
     width = 2048
     height = 1536
 
+
 class LensInfo:
     fl_mm = 12.0
 
@@ -27,11 +28,13 @@ class LensInfo:
 class RigInfo:
     module_name = "DKF33UX265"
     cam_position_m = np.array([[0, 0, 0], [1.116, 0, 0]])
-    image_filename = np.array(["left{}_0.npy", "right{}_0.npy"])
+    input_image_filename = np.array(["cap_lft_{}.rggb", "cap_rit_{}.rggb"])
+    image_filename = np.array(["left{}.npy", "right{}.npy"])
+    scale = 64.0
 
 
 class ChartInfo:
     name = "Checkerboard"
-    nx = 32
+    nx = 31
     ny = 24
     size_mm = 40.0
