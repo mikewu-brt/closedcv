@@ -17,7 +17,8 @@ import numpy as np
 class SensorInfo:
     type = "IMX265"
     pixel_size_um = 3.45
-
+    width = 2048
+    height = 1536
 
 class LensInfo:
     fl_mm = 12.0

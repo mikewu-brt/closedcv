@@ -17,6 +17,8 @@ import numpy as np
 class SensorInfo:
     type = "IMX386"
     pixel_size_um = 1.25
+    width = 4032
+    height = 3016
 
 
 class LensInfo:
