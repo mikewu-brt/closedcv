@@ -107,20 +107,17 @@ def mag_calib(image_dir):
 
             orientation += 1
 
-        imgshape = gray.shape[::-1]
         np.save(os.path.join(image_dir, "objpoints"), objpoints)
         np.save(os.path.join(image_dir, "imgpoints"), imgpoints)
-        np.save(os.path.join(image_dir, "img_shape"), imgshape)
     else:
         objpoints = np.load(os.path.join(image_dir, "objpoints.npy"))
         imgpoints = np.load(os.path.join(image_dir, "imgpoints.npy"))
-        imgshape = tuple(np.load(os.path.join(image_dir, "img_shape.npy")))
 
 
     print("")
     print("Calibrating Camera Magnitude")
     f = fl_mm * 1.0e-3 / (pixel_size_um * 1.0e-6)
-    K_guess = np.array([[f, 0, imgshape[0]/2], [0, f, imgshape[1]/2], [0, 0, 1]])
+    K_guess = np.array([[f, 0, setupInfo.SensorInfo.width*0.5], [0, f, setupInfo.SensorInfo.height*0.5], [0, 0, 1]])
 
     i_flags = cv2.CALIB_USE_INTRINSIC_GUESS
     i_flags = cv2.CALIB_FIX_PRINCIPAL_POINT
@@ -147,6 +144,7 @@ def mag_calib(image_dir):
 
     K = []
     imgpts_ref = []
+    img_size = (setupInfo.SensorInfo.width, setupInfo.SensorInfo.height)
     for cam_idx in range(num_cam):
         print("Compute magnitude for cam {}".format(cam_idx))
         imgpts = []
@@ -158,7 +156,7 @@ def mag_calib(image_dir):
             for i in range(imgpoints.shape[1]):
                 imgpts.append(imgpoints[cam_idx, i, :, :, :].astype(np.float32))
 
-        ret, K1, D1, rvecs1, tvecs1 = cv2.calibrateCamera(objpoints, imgpts, imgshape, K_guess.copy(), None, flags=i_flags)
+        ret, K1, D1, rvecs1, tvecs1 = cv2.calibrateCamera(objpoints, imgpts, img_size, K_guess.copy(), None, flags=i_flags)
 
         K.append(K1)
 

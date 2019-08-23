@@ -28,7 +28,7 @@ import matplotlib.pyplot as plt
 ####################
 
 parser = argparse.ArgumentParser(description="Stereo Calibrate")
-parser.add_argument('--image_dir', default='Outside_Aug15_0')
+parser.add_argument('--image_dir', default='Distance_Aug15_0')
 parser.add_argument('--cal_dir', default='Calibration_Aug15_large_board')
 
 args, unknown = parser.parse_known_args()
@@ -92,7 +92,7 @@ if process_image_files:
             raw = raw.astype(np.float32) /(4.0 * setup_info.RigInfo.scale)
             raw = raw.astype(np.uint8)
 
-            cv2.imshow("Raw Image", raw)
+            cv2.imshow("Raw Image {}".format(cam_idx), raw)
             cv2.waitKey(500)
 
             img = cv2.cvtColor(raw, cv2.COLOR_BayerBG2BGR)

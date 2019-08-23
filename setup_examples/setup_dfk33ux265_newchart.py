@@ -28,7 +28,7 @@ class LensInfo:
 class RigInfo:
     module_name = "DKF33UX265"
     cam_position_m = np.array([[0, 0, 0], [1.116, 0, 0]])
-    input_image_filename = np.array(["cap_lft_{}.rggb", "cap_rit_{}.rggb"])
+    input_image_filename = np.array(["cap_rit_{}.rggb", "cap_lft_{}.rggb"])
     image_filename = np.array(["left{}.npy", "right{}.npy"])
     scale = 64.0
 

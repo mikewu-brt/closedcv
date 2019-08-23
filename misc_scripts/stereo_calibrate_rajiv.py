@@ -133,20 +133,17 @@ if process_image_files:
 
         orientation += 1
 
-    imgshape = gray.shape[::-1]
     np.save(os.path.join(args.image_dir, "objpoints"), objpoints)
     np.save(os.path.join(args.image_dir, "imgpoints"), imgpoints)
-    np.save(os.path.join(args.image_dir, "img_shape"), imgshape)
 else:
     objpoints = np.load(os.path.join(args.image_dir, "objpoints.npy"))
     imgpoints = np.load(os.path.join(args.image_dir, "imgpoints.npy"))
-    imgshape = tuple(np.load(os.path.join(args.image_dir, "img_shape.npy")))
 
 
 print("")
 print("Calibrating Cameras")
 f = fl_mm * 1.0e-3 / (pixel_size_um * 1.0e-6)
-K_guess = np.array([[f, 0, imgshape[0]/2], [0, f, imgshape[1]/2], [0, 0, 1]])
+K_guess = np.array([[f, 0, setupInfo.SensorInfo.width*0.5], [0, f, setupInfo.SensorInfo.height*0.5], [0, 0, 1]])
 
 R_guess = np.identity(3)
 
@@ -176,6 +173,7 @@ D = []
 R = []
 T = []
 imgpts_ref = []
+img_size = (setupInfo.SensorInfo.width, setupInfo.SensorInfo.height)
 for cam_idx in range(num_cam):
     print("Compute intrisics for cam {}, type {}".format(cam_idx, setupInfo.SensorInfo.type))
     imgpts = []
@@ -190,7 +188,7 @@ for cam_idx in range(num_cam):
     K_guess[0,0] = K_mag[cam_idx][0,0]
     K_guess[1,1] = K_mag[cam_idx][1,1]
 
-    ret, K1, D1, rvecs1, tvecs1 = cv2.calibrateCamera(objpoints, imgpts, imgshape, K_guess.copy(), None, flags=i_flags)
+    ret, K1, D1, rvecs1, tvecs1 = cv2.calibrateCamera(objpoints, imgpts, img_size, K_guess.copy(), None, flags=i_flags)
 
     K.append(K1)
     D.append(D1)
@@ -201,8 +199,8 @@ for cam_idx in range(num_cam):
     print("")
     print("Principle point: ({:.2f}, {:.2f}) - Difference from ideal: ({:.2f}, {:.2f})".format(
         K[cam_idx][0, 2], K[cam_idx][1, 2],
-        imgshape[0] / 2 - K[cam_idx][0, 2],
-        imgshape[1] / 2 - K[cam_idx][1, 2]))
+        setupInfo.SensorInfo.width * 0.5 - K[cam_idx][0, 2],
+        setupInfo.SensorInfo.height * 0.5 - K[cam_idx][1, 2]))
     print("")
     print("Focal length (mm): ({:.2f}, {:.2f}) - Expected {}mm".format(
         K[cam_idx][0,0] * pixel_size_um * 1.0e-3, K[cam_idx][1,1] * pixel_size_um * 1.0e-3, fl_mm))
@@ -218,7 +216,7 @@ for cam_idx in range(num_cam):
     if cam_idx != 0:
         T_guess = np.matmul(R_guess, -cam_position_m[cam_idx].reshape(3,1))
         ret, K1, D1, K2, D2, R1, T1, E, F, viewErr = cv2.stereoCalibrateExtended(objpoints, imgpts_ref, imgpts,
-                                  K[0], D[0], K[cam_idx], D[cam_idx], imgshape, R_guess.copy(), T_guess, flags=e_flags)
+                                  K[0], D[0], K[cam_idx], D[cam_idx], img_size, R_guess.copy(), T_guess, flags=e_flags)
         R.append(R1)
         T.append(T1)
 

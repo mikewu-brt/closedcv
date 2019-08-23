@@ -29,7 +29,7 @@ import math
 ####################
 
 parser = argparse.ArgumentParser(description="Stereo Calibrate")
-parser.add_argument('--image_dir', default='cal_dfk33ux265_08072019')
+parser.add_argument('--image_dir', default='Calibration_Aug15_large_board')
 
 args, unknown = parser.parse_known_args()
 if unknown:
@@ -62,7 +62,7 @@ criteria = (cv2.TERM_CRITERIA_EPS + cv2.TERM_CRITERIA_MAX_ITER, 30, 0.001)
 # Misc control
 show_images = True
 process_image_files = True
-force_fx_eq_fy = True
+force_fx_eq_fy = False
 estimate_distortion = True
 
 display_size = 1/2
@@ -88,7 +88,7 @@ chessboard_detect = []
 objpoints = []                  # 3D points in World space (relative)
 imgpoints = np.empty((num_cam, 1, nx*ny, 1, 2))     # Image points
 
-corners2 = np.empty((num_cam, 1, nx*ny, 1, 2))
+corners2 = np.empty((num_cam, 1, nx*ny, 1, 2), dtype=np.float32)
 all_files_read = False
 orientation = 0
 checkerboard_reversal = 0
@@ -113,13 +113,13 @@ if process_image_files:
 
             print("Searching {}".format(fname))
             #ret, corners = cv2.findChessboardCorners(gray, (nx, ny), None)
-            ret, corners = cv2.findChessboardCornersSB(gray, (nx, ny), None)
+            ret, corners = cv2.findChessboardCornersSB(gray, (nx, ny))
             if ret:
                 print("Search Done")
                 #corners2[cam_idx, 0, :, :, :] = cv2.cornerSubPix(gray, corners, (11, 11), (-1, -1), criteria)
                 corners2[cam_idx, 0, :, :, :] = corners
                 if show_images:
-                    img2 = cv2.drawChessboardCorners(img, (nx, ny), corners2[cam_idx, 0].astype(np.float32), ret)
+                    img2 = cv2.drawChessboardCorners(img, (nx, ny), corners2[cam_idx, 0], ret)
                     img2 = cv2.resize(img2, None, fx=display_size, fy=display_size)
                     cv2.imshow("Image {}".format(cam_idx), img2)
                     cv2.waitKey(500)
@@ -155,34 +155,28 @@ if process_image_files:
         chessboard_detect.append(chessboard_found)
         orientation += 1
 
-    imgshape = gray.shape[::-1]
     np.save(os.path.join(path_to_image_dir, args.image_dir, "objpoints"), objpoints)
     np.save(os.path.join(path_to_image_dir,args.image_dir, "imgpoints"), imgpoints)
-    np.save(os.path.join(path_to_image_dir,args.image_dir, "img_shape"), imgshape)
     np.save(os.path.join(path_to_image_dir,args.image_dir, "chessboard_detect"), chessboard_detect)
 else:
     objpoints = np.load(os.path.join(path_to_image_dir,args.image_dir, "objpoints.npy"))
     imgpoints = np.load(os.path.join(path_to_image_dir,args.image_dir, "imgpoints.npy"))
-    imgshape = tuple(np.load(os.path.join(path_to_image_dir,args.image_dir, "img_shape.npy")))
+    chessboard_detect = np.load(os.path.join(path_to_image_dir,args.image_dir, "chessboard_detect.npy"))
 
 
 print("")
 print("Calibrating Cameras")
 f = fl_mm * 1.0e-3 / (pixel_size_um * 1.0e-6)
-K_guess = np.array([[f, 0, imgshape[0]/2], [0, f, imgshape[1]/2], [0, 0, 1]])
+K_guess = np.array([[f, 0, setupInfo.SensorInfo.width*0.5], [0, f, setupInfo.SensorInfo.height*0.5], [0, 0, 1]])
 
 R_guess = np.identity(3)
 
-i_flags = cv2.CALIB_USE_INTRINSIC_GUESS | cv2.CALIB_ZERO_TANGENT_DIST
+i_flags = cv2.CALIB_USE_INTRINSIC_GUESS
+i_flags |= cv2.CALIB_ZERO_TANGENT_DIST
 i_flags |= cv2.CALIB_FIX_K3
-i_flags |= cv2.CALIB_FIX_K4
-i_flags |= cv2.CALIB_FIX_K5
-i_flags |= cv2.CALIB_FIX_K6
 if not estimate_distortion:
-    i_flags |= cv2.CALIB_ZERO_TANGENT_DIST
     i_flags |= cv2.CALIB_FIX_K1
     i_flags |= cv2.CALIB_FIX_K2
-    i_flags |= cv2.CALIB_FIX_K3
     i_flags |= cv2.CALIB_FIX_K4
     i_flags |= cv2.CALIB_FIX_K5
     i_flags |= cv2.CALIB_FIX_K6
@@ -207,6 +201,8 @@ rvecs = []
 tvecs = []
 imgpts_ref = []
 view_error = []
+#img_size = (setupInfo.SensorInfo.width, setupInfo.SensorInfo.height)
+img_size = (setupInfo.SensorInfo.height, setupInfo.SensorInfo.width)
 for cam_idx in range(num_cam):
     print("Compute intrisics for cam {}".format(cam_idx))
     print("   Sensor Type: {}".format(setupInfo.SensorInfo.type))
@@ -222,7 +218,7 @@ for cam_idx in range(num_cam):
         for i in range(imgpoints.shape[1]):
             imgpts.append(imgpoints[cam_idx, i, :, :, :].astype(np.float32))
 
-    ret, K1, D1, rvecs1, tvecs1 = cv2.calibrateCamera(objpoints, imgpts, imgshape, K_guess.copy(), None, flags=i_flags)
+    ret, K1, D1, rvecs1, tvecs1 = cv2.calibrateCamera(objpoints, imgpts, img_size, K_guess.copy(), None, flags=i_flags)
 
     K.append(K1)
     D.append(D1)
@@ -235,8 +231,8 @@ for cam_idx in range(num_cam):
     print("")
     print("Principle point: ({:.2f}, {:.2f}) - Difference from ideal: ({:.2f}, {:.2f})".format(
         K[cam_idx][0, 2], K[cam_idx][1, 2],
-        imgshape[0] / 2 - K[cam_idx][0, 2],
-        imgshape[1] / 2 - K[cam_idx][1, 2]))
+        setupInfo.SensorInfo.width * 0.5 - K[cam_idx][0, 2],
+        setupInfo.SensorInfo.height * 0.5 - K[cam_idx][1, 2]))
     print("")
     print("Focal length (mm): ({:.2f}, {:.2f}) - Expected {}mm".format(
         K[cam_idx][0,0] * pixel_size_um * 1.0e-3, K[cam_idx][1,1] * pixel_size_um * 1.0e-3, fl_mm))
@@ -252,7 +248,7 @@ for cam_idx in range(num_cam):
     if cam_idx != 0:
         T_guess = np.matmul(R_guess, -cam_position_m[cam_idx].reshape(3,1))
         ret, K1, D1, K2, D2, R1, T1, E, F, viewErr = cv2.stereoCalibrateExtended(objpoints, imgpts_ref, imgpts,
-                                  K[0], D[0], K[cam_idx], D[cam_idx], imgshape, R_guess.copy(), T_guess, flags=e_flags)
+                                  K[0], D[0], K[cam_idx], D[cam_idx], img_size, R_guess.copy(), T_guess, flags=e_flags)
         R.append(R1)
         T.append(T1)
         view_error.append(viewErr)

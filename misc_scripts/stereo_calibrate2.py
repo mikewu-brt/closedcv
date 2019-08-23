@@ -27,7 +27,7 @@ import matplotlib.pyplot as plt
 ####################
 
 parser = argparse.ArgumentParser(description="Stereo Calibrate")
-parser.add_argument('--image_dir', default='cal_dfk33ux265_08072019')
+parser.add_argument('--image_dir', default='Calibration_Aug15_large_board')
 
 args, unknown = parser.parse_known_args()
 if unknown:
@@ -36,6 +36,7 @@ if unknown:
 ####################
 
 setupInfo = importlib.import_module("{}.setup".format(args.image_dir))
+img_size = (setupInfo.SensorInfo.width, setupInfo.SensorInfo.height)
 
 # check if env variable PATH_TO_IMAGE_DIR is set, if not use relative path
 path_to_image_dir = os.getenv("PATH_TO_IMAGE_DIR")
@@ -82,23 +83,21 @@ objp = np.zeros((nx*ny, 3), np.float32)
 objp[:,:2] = np.mgrid[0:nx,0:ny].T.reshape(-1,2) * (checker_size_mm * 1.0e-3)
 
 # Arrays to store object points and image points from all the images.
-#objpoints = np.empty((1, nx*ny, 3))                 # 3D points in World space (relative)
 objpoints = []                  # 3D points in World space (relative)
 extrinsic_pts = np.empty((num_cam, 1, nx * ny, 1, 2))     # Image points
 intrinsic_pts = []
 for cam_idx in range(num_cam):
     intrinsic_pts.append([])
-#chessboard_detect_np = np.zeros((num_cam,max_num_files))
 chessboard_detect = []
 for cam_idx in range(num_cam):
     chessboard_detect.append([])
 
-corners2 = np.empty((num_cam, 1, nx*ny, 1, 2))
+corners2 = np.empty((num_cam, 1, nx*ny, 1, 2), dtype=np.float32)
 all_files_read = False
 orientation = 0
 num_files_missing = 0
 if process_image_files:
-    while True:
+    while not all_files_read:
         chessboard_found = True
         # Load imageos
         for cam_idx in range(num_cam):
@@ -116,14 +115,14 @@ if process_image_files:
             img = cv2.cvtColor(raw, cv2.COLOR_BayerBG2BGR)
 
             print("Searching {}".format(fname))
-            ret, corners = cv2.findChessboardCorners(gray, (nx, ny), None)
+            ret, corners = cv2.findChessboardCornersSB(gray, (nx, ny), flags=cv2.CALIB_CB_ACCURACY)
             if ret:
                 print("Search Done")
                 chessboard_detect[cam_idx].append(True)
-                corners2[cam_idx, 0, :, :, :] = cv2.cornerSubPix(gray, corners, (11, 11), (-1, -1), criteria)
+                corners2[cam_idx, 0, :, :, :] = corners
                 intrinsic_pts[cam_idx].append(corners2[cam_idx, 0].copy())
                 if show_images:
-                    img2 = cv2.drawChessboardCorners(img, (nx, ny), corners2[cam_idx, 0].astype(np.float32), True)
+                    img2 = cv2.drawChessboardCorners(img, (nx, ny), corners2[cam_idx, 0], True)
                     img2 = cv2.resize(img2, None, fx=display_size, fy=display_size)
                     cv2.imshow("Image {}".format(cam_idx), img2)
                     cv2.waitKey(500)
@@ -137,7 +136,7 @@ if process_image_files:
                     cv2.waitKey(500)
 
         if all_files_read:
-            break
+            pass
         elif chessboard_found:
             # Add points to arrays
             if len(objpoints) == 0:
@@ -147,31 +146,28 @@ if process_image_files:
             objpoints.append(objp)
         orientation += 1
 
-
     chessboard_detect_np = np.asarray(chessboard_detect)
-    imgshape = gray.shape[::-1]
     np.save(os.path.join(path_to_image_dir,args.image_dir, "objpoints"), objpoints)
     np.save(os.path.join(path_to_image_dir,args.image_dir, "extrinsic_pts"), extrinsic_pts)
     np.save(os.path.join(path_to_image_dir,args.image_dir, "intrinsic_pts"), intrinsic_pts)
-    np.save(os.path.join(path_to_image_dir,args.image_dir, "img_shape"), imgshape)
     np.save(os.path.join(path_to_image_dir,args.image_dir, "chessboard_detect"), chessboard_detect_np)
 else:
     objpoints = np.load(os.path.join(path_to_image_dir,args.image_dir, "objpoints.npy"))
     extrinsic_pts = np.load(os.path.join(path_to_image_dir,args.image_dir, "extrinsic_pts.npy"))
     intrinsic_pts = np.load(os.path.join(path_to_image_dir,args.image_dir, "intrinsic_pts.npy"))
     chessboard_detect_np = np.load(os.path.join(path_to_image_dir,args.image_dir, "chessboard_detect.npy"))
-    imgshape = tuple(np.load(os.path.join(path_to_image_dir,args.image_dir, "img_shape.npy")))
 
 
 print("")
 print("Calibrating Cameras")
 f = fl_mm * 1.0e-3 / (pixel_size_um * 1.0e-6)
-K_guess = np.array([[f, 0, imgshape[0]/2], [0, f, imgshape[1]/2], [0, 0, 1]])
+K_guess = np.array([[f, 0, setupInfo.SensorInfo.width*0.5], [0, f, setupInfo.SensorInfo.height*0.5], [0, 0, 1]])
 
 R_guess = np.identity(3)
 
 i_flags = cv2.CALIB_USE_INTRINSIC_GUESS
 i_flags |= cv2.CALIB_ZERO_TANGENT_DIST
+i_flags |= cv2.CALIB_FIX_K3
 if not estimate_distortion:
     i_flags |= cv2.CALIB_ZERO_TANGENT_DIST
     i_flags |= cv2.CALIB_FIX_K1
@@ -197,7 +193,6 @@ K = []
 D = []
 R = []
 T = []
-#imgpts_ref = []
 view_error = []
 for cam_idx in range(num_cam):
     print("")
@@ -212,9 +207,9 @@ for cam_idx in range(num_cam):
     img_pts = []
     for capture_idx in range(len(intrinsic_pts[cam_idx])):
         obj_pts.append(objp)
-        img_pts.append(intrinsic_pts[cam_idx][capture_idx].astype(np.float32))
+        img_pts.append(intrinsic_pts[cam_idx][capture_idx])
 
-    ret, K1, D1, rvecs1, tvecs1 = cv2.calibrateCamera(obj_pts, img_pts, imgshape, K_guess.copy(), None, flags=i_flags)
+    ret, K1, D1, rvecs1, tvecs1 = cv2.calibrateCamera(obj_pts, img_pts, img_size, K_guess.copy(), None, flags=i_flags, criteria=criteria)
     K.append(K1)
     D.append(D1)
 
@@ -228,20 +223,13 @@ for cam_idx in range(num_cam):
     if cam_idx != 0:
         for i in range(chessboard_detect_np.shape[1]):
             if (chessboard_detect_np[0,i] == True) and (chessboard_detect_np[cam_idx,i] == True):
-                imgpts_ref.append(intrinsic_pts[0][count_ref].astype(np.float32))
-                imgpts.append(intrinsic_pts[cam_idx][count_aux].astype(np.float32))
+                imgpts_ref.append(intrinsic_pts[0][count_ref])
+                imgpts.append(intrinsic_pts[cam_idx][count_aux])
                 objpoints.append(objp)
             if chessboard_detect_np[0,i] == True:
                 count_ref += 1
             if chessboard_detect_np[cam_idx,i] == True:
                 count_aux += 1
-    # the following case pairs up all the cam together - meaning borad has to be detected in all the cams
-    #if cam_idx == 0:
-    #    for i in range(extrinsic_pts.shape[1]):
-    #        imgpts_ref.append(extrinsic_pts[cam_idx, i, :, :, :].astype(np.float32))
-    #else:
-    #    for i in range(extrinsic_pts.shape[1]):
-    #        imgpts.append(extrinsic_pts[cam_idx, i, :, :, :].astype(np.float32))
 
     print("")
     print("")
@@ -249,8 +237,8 @@ for cam_idx in range(num_cam):
     print("")
     print("Principle point: ({:.2f}, {:.2f}) - Difference from ideal: ({:.2f}, {:.2f})".format(
         K[cam_idx][0, 2], K[cam_idx][1, 2],
-        imgshape[0] / 2 - K[cam_idx][0, 2],
-        imgshape[1] / 2 - K[cam_idx][1, 2]))
+        setupInfo.SensorInfo.width / 2 - K[cam_idx][0, 2],
+        setupInfo.SensorInfo.height / 2 - K[cam_idx][1, 2]))
     print("")
     print("Focal length (mm): ({:.2f}, {:.2f}) - Expected {}mm".format(
         K[cam_idx][0,0] * pixel_size_um * 1.0e-3, K[cam_idx][1,1] * pixel_size_um * 1.0e-3, fl_mm))
@@ -266,7 +254,7 @@ for cam_idx in range(num_cam):
     if cam_idx != 0:
         T_guess = np.matmul(R_guess, -cam_position_m[cam_idx].reshape(3,1))
         ret, K1, D1, K2, D2, R1, T1, E, F, viewErr = cv2.stereoCalibrateExtended(objpoints, imgpts_ref, imgpts,
-                                  K[0], D[0], K[cam_idx], D[cam_idx], imgshape, R_guess.copy(), T_guess, flags=e_flags)
+                                  K[0], D[0], K[cam_idx], D[cam_idx], img_size, R_guess.copy(), T_guess, flags=e_flags)
         R.append(R1)
         T.append(T1)
         view_error.append(viewErr)

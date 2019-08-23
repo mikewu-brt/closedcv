@@ -26,6 +26,7 @@ import matplotlib.pyplot as plt
 
 parser = argparse.ArgumentParser(description="Stereo Calibrate")
 parser.add_argument('--image_dir', default='Distance_Aug15_0')
+parser.add_argument('--cal_dir', default='Calibration_Aug15_large_board')
 
 args, unknown = parser.parse_known_args()
 if unknown:
@@ -45,7 +46,7 @@ ny = setupInfo.ChartInfo.ny
 num_cam = setupInfo.RigInfo.image_filename.size
 orientation = 0
 all_files_read = False
-stereo = Stereo(args.image_dir)
+stereo = Stereo(args.cal_dir)
 corners2 = np.empty((num_cam, 1, nx*ny, 1, 2))
 while True:
     chessboard_found = True
@@ -63,6 +64,9 @@ while True:
         gray = cv2.cvtColor(raw, cv2.COLOR_BayerBG2GRAY)
         img = cv2.cvtColor(raw, cv2.COLOR_BayerBG2BGR)
 
+        if cam_idx == 0:
+            gray_ref = gray.copy()
+
         #print("Searching {}".format(fname))
         ret, corners = cv2.findChessboardCorners(gray, (nx, ny), None)
         if ret:
@@ -76,12 +80,12 @@ while True:
         break
     elif chessboard_found:
         # Compute reprojection error
-        pts = np.empty((2, corners2.shape[2], 1, 2))
-        pts[0] = corners2[0, 0]
+        pts = []
+        pts.append(corners2[0, 0])
         for cam_idx in range(1, num_cam):
-            pts[1] = corners2[cam_idx, 0]
+            pts.append(corners2[cam_idx, 0])
             distance, disparity = stereo.compute_distance_disparity(pts)
-            reproj_pts = stereo.reproject_points(pts[0], distance, 1)
+            reproj_pts = stereo.reproject_points(pts[0], distance[cam_idx - 1], cam_idx)
             reproj_err_vect = pts[1] - reproj_pts
             reproj_xy_err = np.sqrt(np.average(np.square(reproj_err_vect), axis=0))
             reproj_err = np.sqrt(np.average(np.average(np.square(reproj_err_vect), axis=2)))
