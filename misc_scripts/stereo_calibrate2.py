@@ -27,7 +27,7 @@ import matplotlib.pyplot as plt
 ####################
 
 parser = argparse.ArgumentParser(description="Stereo Calibrate")
-parser.add_argument('--image_dir', default='Calibration_Aug15_large_board')
+parser.add_argument('--image_dir', default='Calibration_Aug23')
 
 args, unknown = parser.parse_known_args()
 if unknown:
@@ -102,14 +102,14 @@ if process_image_files:
         # Load imageos
         for cam_idx in range(num_cam):
             fname = os.path.join(path_to_image_dir,args.image_dir, setupInfo.RigInfo.image_filename[cam_idx].format(orientation))
-            raw  = []
+            raw = []
             try:
                 raw = np.load(fname)
             except:
                 all_files_read = True
                 break
 
-            raw = raw.astype(np.float32) * 256.0 / 1024.0
+            raw = raw.astype(np.float32) / 256.0
             raw = raw.astype(np.uint8)
             gray = cv2.cvtColor(raw, cv2.COLOR_BayerBG2GRAY)
             img = cv2.cvtColor(raw, cv2.COLOR_BayerBG2BGR)

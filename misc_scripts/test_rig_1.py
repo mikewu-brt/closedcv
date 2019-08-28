@@ -14,16 +14,22 @@
  *
 """
 from libs.Optical import *
+import numpy as np
+import matplotlib as matplot
+matplot.use('TkAgg')
+import matplotlib.pyplot as plt
 
 sensor_type = "IMX265"
 pixel_size_um = 3.45
 h_pixels = 2056
 v_pixels = 1542
 
-f_num = 2
+f_num = 2.0
 lens_fl_mm = 12
 
-obj_dist_mm = 100 * 1000
+obj_dist_mm = 5 * 1000
+
+baseline_m = 0.5
 
 optical = Optical(h_pixels, v_pixels, pixel_size_um, f_num, lens_fl_mm)
 sensor = optical.sensor
@@ -54,3 +60,13 @@ print("Scene size at {} m: {:.2f} x {:.2f} (m)".format(obj_dist_mm / 1000,
 
 print("Hyper focal distance: {:.2f} m for 1 pixel CoC".format(optical.hyper_focal_dist_mm(1.0) / 1000))
 print("Hyper focal distance: {:.2f} m for 3 pixel CoC".format(optical.hyper_focal_dist_mm(3.0) / 1000))
+
+# Estimate the expected disparity vs distance
+disp = np.arange(10, 400)
+depth = (lens.focal_length_mm() * 1.0e-3) / (sensor.pixel_size_um() * 1.0e-6) * baseline_m / disp
+plt.figure(1).clear()
+plt.plot(disp, depth)
+plt.grid()
+plt.title("Disparity vs Distance")
+plt.xlabel("Disparity (pixels)")
+plt.ylabel("Distance (m)")

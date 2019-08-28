@@ -153,6 +153,12 @@ class Stereo:
         """
         return Stereo.compute_projection_matrix(self.__K[cam_idx], self.__R[cam_idx], self.__T[cam_idx])
 
+    def rectification_matrix(self, cam_idx):
+        return cv2.stereoRectify(self.__K[0], self.__D[0],
+                                                          self.__K[cam_idx], self.__D[cam_idx],
+                                                          self.__img_shape,
+                                                          self.__R[cam_idx], self.__T[cam_idx])
+
     def homography_inf(self, cam_idx):
         return Stereo.compute_homography_inf(self.__K[0], self.__K[cam_idx], self.__R[cam_idx])
 
@@ -179,10 +185,7 @@ class Stereo:
         for cam_idx in range(1, len(img_pts)):
             if T is None:
                 # Rectify
-                R1, R2, P1, P2, Q, roi1, roi2 = cv2.stereoRectify(self.__K[0], self.__D[0],
-                                                                  self.__K[cam_idx], self.__D[cam_idx],
-                                                                  self.__img_shape,
-                                                                  self.__R[cam_idx], self.__T[cam_idx])
+                R1, R2, P1, P2, Q, roi1, roi2 = self.rectification_matrix()
 
                 # Rectify reference camera points
                 rect_ref = cv2.undistortPoints(src=img_pts[0], cameraMatrix=self.__K[0], distCoeffs=self.__D[0],
@@ -197,7 +200,6 @@ class Stereo:
                 rect_ref = img_pts[0]
                 rect_src = img_pts[cam_idx]
 
-            print(rect_ref.shape)
             # Compute disparity in pixels
             diff = rect_src - rect_ref
             disparity[cam_idx - 1] = diff[:, 0]
