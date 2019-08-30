@@ -19,6 +19,7 @@ class SensorInfo:
     pixel_size_um = 3.45
     width = 2048
     height = 1536
+    num_adc_bits = 10
 
 
 class LensInfo:
@@ -30,7 +31,7 @@ class RigInfo:
     cam_position_m = np.array([[0, 0, 0], [1.116, 0, 0]])
     input_image_filename = np.array(["cap_rit_{}.rggb", "cap_lft_{}.rggb"])
     image_filename = np.array(["left{}.npy", "right{}.npy"])
-    scale = 64.0
+    left_justified = True
 
 
 class ChartInfo:

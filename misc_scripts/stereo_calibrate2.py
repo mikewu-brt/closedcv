@@ -63,8 +63,10 @@ criteria = (cv2.TERM_CRITERIA_EPS + cv2.TERM_CRITERIA_MAX_ITER, 30, 0.001)
 # Misc control
 show_images = True
 process_image_files = True
+use_rgb_image = False
 force_fx_eq_fy = True
 estimate_distortion = True
+use_2step_findchessboard = False
 
 display_size = 1/2
 
@@ -116,11 +118,25 @@ if process_image_files:
             img = cv2.cvtColor(raw, cv2.COLOR_BayerBG2BGR)
 
             print("Searching {}".format(fname))
-            ret, corners = cv2.findChessboardCornersSB(img, (nx, ny), flags=cv2.CALIB_CB_ACCURACY)
+            if use_2step_findchessboard == True:
+                if use_rgb_image == False:
+                    ret, corners = cv2.findChessboardCorners(gray, (nx, ny), None)
+                else:
+                    ret, corners = cv2.findChessboardCorners(img, (nx, ny), None)
+            else:
+                if use_rgb_image == False:
+                    ret, corners = cv2.findChessboardCornersSB(gray, (nx, ny), None)
+                else:
+                    ret, corners = cv2.findChessboardCornersSB(img, (nx, ny), None)
+
+
             if ret:
                 print("Search Done")
                 chessboard_detect[cam_idx].append(True)
-                corners2[cam_idx, 0, :, :, :] = corners
+                if use_2step_findchessboard == True:
+                    corners2[cam_idx, 0, :, :, :] = cv2.cornerSubPix(gray, corners, (11, 11), (-1, -1), criteria)
+                else:
+                    corners2[cam_idx, 0, :, :, :] = corners
                 intrinsic_pts[cam_idx].append(corners2[cam_idx, 0].copy())
                 if show_images:
                     img2 = cv2.drawChessboardCorners(img, (nx, ny), corners2[cam_idx, 0], True)
@@ -152,6 +168,14 @@ if process_image_files:
     np.save(os.path.join(path_to_image_dir, args.cal_dir, "extrinsic_pts"), extrinsic_pts)
     np.save(os.path.join(path_to_image_dir, args.cal_dir, "intrinsic_pts"), intrinsic_pts)
     np.save(os.path.join(path_to_image_dir, args.cal_dir, "chessboard_detect"), chessboard_detect_np)
+
+    imgpoints_new = np.squeeze(extrinsic_pts)
+    imgpoints1 = imgpoints_new[0,:,:,:]
+    imgpoints2 = imgpoints_new[1,:,:,:]
+    imgpoints1_new = np.reshape(imgpoints1,[-1,2])
+    imgpoints2_new = np.reshape(imgpoints2,[-1,2])
+    np.savetxt(os.path.join(path_to_image_dir,args.image_dir,"imgpoint1.txt"), imgpoints1_new)
+    np.savetxt(os.path.join(path_to_image_dir,args.image_dir,"imgpoint2.txt"), imgpoints2_new)
 else:
     objpoints = np.load(os.path.join(path_to_image_dir, args.cal_dir, "objpoints.npy"))
     extrinsic_pts = np.load(os.path.join(path_to_image_dir, args.cal_dir, "extrinsic_pts.npy"))
@@ -245,17 +269,33 @@ for cam_idx in range(num_cam):
         K[cam_idx][0,0] * pixel_size_um * 1.0e-3, K[cam_idx][1,1] * pixel_size_um * 1.0e-3, fl_mm))
 
     print("")
-    print("Camera Matrix:")
+    print("Camera Matrix round 1:")
     print(K1)
 
     print("")
-    print("Distortion Vector:")
+    print("Distortion Vector round 1:")
     print(D1)
+
 
     if cam_idx != 0:
         T_guess = np.matmul(R_guess, -cam_position_m[cam_idx].reshape(3,1))
         ret, K1, D1, K2, D2, R1, T1, E, F, viewErr = cv2.stereoCalibrateExtended(objpoints, imgpts_ref, imgpts,
                                   K[0], D[0], K[cam_idx], D[cam_idx], img_size, R_guess.copy(), T_guess, flags=e_flags)
+
+        print("")
+        print("Camera Matrix round 2:")
+        print(K[0])
+        print("")
+        print("Camera Matrix round 2:")
+        print(K[1])
+
+        print("")
+        print("Distortion Vector round 2:")
+        print(D[0])
+        print("")
+        print("Distortion Vector round 2:")
+        print(D[1])
+
         R.append(R1)
         T.append(T1)
         view_error.append(viewErr)
@@ -282,3 +322,14 @@ np.save(os.path.join(path_to_image_dir, args.cal_dir, "D"), D)
 np.save(os.path.join(path_to_image_dir, args.cal_dir, "K"), K)
 np.save(os.path.join(path_to_image_dir, args.cal_dir, "R"), R)
 np.save(os.path.join(path_to_image_dir, args.cal_dir, "T"), T)
+
+D_np = np.asarray(D)
+K_np = np.asarray(K)
+K_np = np.reshape(K_np,[-1,2])
+R_np = np.asarray(R)
+T_np = np.asarray(T)
+np.savetxt(os.path.join(path_to_image_dir,args.image_dir,"D.txt"), np.squeeze(D_np))
+np.savetxt(os.path.join(path_to_image_dir,args.image_dir,"K.txt"), K_np)
+np.savetxt(os.path.join(path_to_image_dir,args.image_dir,"R.txt"), np.reshape(R_np,[-1,2]))
+np.savetxt(os.path.join(path_to_image_dir,args.image_dir,"T.txt"), np.squeeze(T_np))
+

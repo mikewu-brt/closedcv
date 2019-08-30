@@ -106,7 +106,7 @@ if process_image_files:
                 all_files_read = True
                 break
 
-            raw = raw.astype(np.float32) * 256.0 / 1024.0
+            raw = raw.astype(np.float32)/ 256.0
             raw = raw.astype(np.uint8)
             gray = cv2.cvtColor(raw, cv2.COLOR_BayerBG2GRAY)
             img = cv2.cvtColor(raw, cv2.COLOR_BayerBG2BGR)
@@ -158,6 +158,15 @@ if process_image_files:
     np.save(os.path.join(path_to_image_dir, args.image_dir, "objpoints"), objpoints)
     np.save(os.path.join(path_to_image_dir,args.image_dir, "imgpoints"), imgpoints)
     np.save(os.path.join(path_to_image_dir,args.image_dir, "chessboard_detect"), chessboard_detect)
+
+    imgpoints_new = np.squeeze(imgpoints)
+    imgpoints1 = imgpoints_new[0,:,:,:]
+    imgpoints2 = imgpoints_new[1,:,:,:]
+    imgpoints1_new = np.reshape(imgpoints1,[-1,2])
+    imgpoints2_new = np.reshape(imgpoints2,[-1,2])
+
+    np.savetxt(os.path.join(path_to_image_dir,args.image_dir,"imgpoint1.txt"), imgpoints1_new)
+    np.savetxt(os.path.join(path_to_image_dir,args.image_dir,"imgpoint2.txt"), imgpoints2_new)
 else:
     objpoints = np.load(os.path.join(path_to_image_dir,args.image_dir, "objpoints.npy"))
     imgpoints = np.load(os.path.join(path_to_image_dir,args.image_dir, "imgpoints.npy"))
@@ -277,3 +286,17 @@ np.save(os.path.join(path_to_image_dir,args.image_dir, "R"), R)
 np.save(os.path.join(path_to_image_dir,args.image_dir, "T"), T)
 np.save(os.path.join(path_to_image_dir,args.image_dir, "tvecs"), tvecs)
 np.save(os.path.join(path_to_image_dir,args.image_dir, "rvecs"), rvecs)
+
+
+D_np = np.asarray(D)
+K_np = np.asarray(K)
+K_np = np.reshape(K_np,[-1,2])
+R_np = np.asarray(R)
+T_np = np.asarray(T)
+np.savetxt(os.path.join(path_to_image_dir,args.image_dir,"D.txt"), np.squeeze(D_np))
+np.savetxt(os.path.join(path_to_image_dir,args.image_dir,"K.txt"), K_np)
+np.savetxt(os.path.join(path_to_image_dir,args.image_dir,"R.txt"), np.reshape(R_np,[-1,2]))
+np.savetxt(os.path.join(path_to_image_dir,args.image_dir,"T.txt"), np.squeeze(T_np))
+
+
+

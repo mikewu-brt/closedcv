@@ -182,6 +182,7 @@ R_guess = np.identity(3)
 
 i_flags = cv2.CALIB_USE_INTRINSIC_GUESS
 i_flags |= cv2.CALIB_ZERO_TANGENT_DIST
+i_flags |= cv2.CALIB_FIX_K3
 if not estimate_distortion:
     i_flags |= cv2.CALIB_ZERO_TANGENT_DIST
     i_flags |= cv2.CALIB_FIX_K1

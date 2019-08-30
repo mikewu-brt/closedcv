@@ -27,7 +27,7 @@ import matplotlib.pyplot as plt
 # Input Parameters
 ####################
 
-parser = argparse.ArgumentParser(description="Stereo Calibrate")
+parser = argparse.ArgumentParser(description="read_rggb_16bit_save_nparray_vector ")
 parser.add_argument('--image_dir', default='Distance_Aug15_0')
 parser.add_argument('--cal_dir', default='Calibration_Aug15_large_board')
 
@@ -44,6 +44,9 @@ path_to_image_dir = os.getenv("PATH_TO_IMAGE_DIR")
 if path_to_image_dir == None:
     path_to_image_dir = '.'
 
+scale = 1.0
+if setup_info.RigInfo.left_justified == False:
+    scale = np.power(2,16-setup_info.SensorInfo.num_adc_bits)
 
 # Capture images file names
 image_filename = setup_info.RigInfo.input_image_filename
@@ -77,7 +80,6 @@ if process_image_files:
                 break
 
             # convert to 2-D
-            #print(max(raw))
             raw = raw.reshape(sensor_size[1], sensor_size[0])
 
             # Save raw as a numpy array
@@ -86,10 +88,10 @@ if process_image_files:
             fname = os.path.join(path_to_image_dir,args.image_dir, setup_info.RigInfo.image_filename[cam_idx].format(orientation))
             print("written filename = ",fname)
 
-            r = raw.copy() / setup_info.RigInfo.scale
+            r = raw.copy() * scale
             np.save(fname, r.astype(np.uint16))
 
-            raw = raw.astype(np.float32) /(4.0 * setup_info.RigInfo.scale)
+            raw = r.astype(np.float32) / 256.0
             raw = raw.astype(np.uint8)
 
             cv2.imshow("Raw Image {}".format(cam_idx), raw)

@@ -34,14 +34,16 @@ args, unknown = parser.parse_known_args()
 if unknown:
     print("Unknown options: {}".format(unknown))
 
-sys.path.append(args.image_dir)
 ####################
-max_pixel_value = 1024.0
 display_size = 1/2
 
-setupInfo = importlib.import_module("setup")
-#import setup as setupInfo
-#setupInfo = importlib.import_module("{}setup.py".format(args.image_dir))
+setupInfo = importlib.import_module("{}.setup".format(args.image_dir))
+
+# check if env variable PATH_TO_IMAGE_DIR is set, if not use relative path
+path_to_image_dir = os.getenv("PATH_TO_IMAGE_DIR")
+if path_to_image_dir == None:
+    path_to_image_dir = '.'
+
 
 # Optical parameters
 fl_mm = setupInfo.LensInfo.fl_mm
@@ -59,14 +61,14 @@ checker_size_mm = setupInfo.ChartInfo.size_mm
 criteria = (cv2.TERM_CRITERIA_EPS + cv2.TERM_CRITERIA_MAX_ITER, 30, 0.001)
 
 image_dir = args.image_dir
-objpoints = np.load(os.path.join(image_dir, "objpoints.npy"))
-imgpoints = np.load(os.path.join(image_dir, "imgpoints.npy"))
-imgshape = tuple(np.load(os.path.join(image_dir, "img_shape.npy")))
-tvecs = np.load(os.path.join(image_dir, "tvecs.npy"))
-rvecs = np.load(os.path.join(image_dir, "rvecs.npy"))
-K = np.load(os.path.join(image_dir, "K.npy"))
-D = np.load(os.path.join(image_dir, "D.npy"))
-chessboard_detect = np.load(os.path.join(image_dir, "chessboard_detect.npy"))
+objpoints = np.load(os.path.join(path_to_image_dir, image_dir, "objpoints.npy"))
+imgpoints = np.load(os.path.join(path_to_image_dir, image_dir, "imgpoints.npy"))
+imgshape = tuple(np.load(os.path.join(path_to_image_dir, image_dir, "img_shape.npy")))
+tvecs = np.load(os.path.join(path_to_image_dir, image_dir, "tvecs.npy"))
+rvecs = np.load(os.path.join(path_to_image_dir, image_dir, "rvecs.npy"))
+K = np.load(os.path.join(path_to_image_dir, image_dir, "K.npy"))
+D = np.load(os.path.join(path_to_image_dir, image_dir, "D.npy"))
+chessboard_detect = np.load(os.path.join(path_to_image_dir, image_dir, "chessboard_detect.npy"))
 
 # set up the image index array by skipping over images where chessboard pattern was not found
 image_index = np.where(chessboard_detect == True)
@@ -150,9 +152,9 @@ for i in range(len(objpoints)):
         print("error_y_nodist in pixels =", error_y_nodistcorrect)
         imgpoints_x = imgpoints[cam_idx, i,:,0,0]
         imgpoints_y = imgpoints[cam_idx,i,:,0,1]
-        fname = os.path.join(image_dir, setupInfo.RigInfo.image_filename[cam_idx].format(image_index[0][i]))
+        fname = os.path.join(path_to_image_dir, image_dir, setupInfo.RigInfo.image_filename[cam_idx].format(image_index[0][i]))
         raw = np.load(fname)
-        raw = raw.astype(np.float32) * 256.0 / max_pixel_value
+        raw = raw.astype(np.float32) / 256.0
         raw = raw.astype(np.uint8)
         print(fname)
         img2 = cv2.cvtColor(raw, cv2.COLOR_BayerBG2BGR)
