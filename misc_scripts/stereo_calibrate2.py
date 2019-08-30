@@ -28,6 +28,7 @@ import matplotlib.pyplot as plt
 
 parser = argparse.ArgumentParser(description="Stereo Calibrate")
 parser.add_argument('--image_dir', default='Calibration_Aug23')
+parser.add_argument('--cal_dir', default='Calibration_Aug23')
 
 args, unknown = parser.parse_known_args()
 if unknown:
@@ -115,7 +116,7 @@ if process_image_files:
             img = cv2.cvtColor(raw, cv2.COLOR_BayerBG2BGR)
 
             print("Searching {}".format(fname))
-            ret, corners = cv2.findChessboardCornersSB(gray, (nx, ny), flags=cv2.CALIB_CB_ACCURACY)
+            ret, corners = cv2.findChessboardCornersSB(img, (nx, ny), flags=cv2.CALIB_CB_ACCURACY)
             if ret:
                 print("Search Done")
                 chessboard_detect[cam_idx].append(True)
@@ -147,15 +148,15 @@ if process_image_files:
         orientation += 1
 
     chessboard_detect_np = np.asarray(chessboard_detect)
-    np.save(os.path.join(path_to_image_dir,args.image_dir, "objpoints"), objpoints)
-    np.save(os.path.join(path_to_image_dir,args.image_dir, "extrinsic_pts"), extrinsic_pts)
-    np.save(os.path.join(path_to_image_dir,args.image_dir, "intrinsic_pts"), intrinsic_pts)
-    np.save(os.path.join(path_to_image_dir,args.image_dir, "chessboard_detect"), chessboard_detect_np)
+    np.save(os.path.join(path_to_image_dir, args.cal_dir, "objpoints"), objpoints)
+    np.save(os.path.join(path_to_image_dir, args.cal_dir, "extrinsic_pts"), extrinsic_pts)
+    np.save(os.path.join(path_to_image_dir, args.cal_dir, "intrinsic_pts"), intrinsic_pts)
+    np.save(os.path.join(path_to_image_dir, args.cal_dir, "chessboard_detect"), chessboard_detect_np)
 else:
-    objpoints = np.load(os.path.join(path_to_image_dir,args.image_dir, "objpoints.npy"))
-    extrinsic_pts = np.load(os.path.join(path_to_image_dir,args.image_dir, "extrinsic_pts.npy"))
-    intrinsic_pts = np.load(os.path.join(path_to_image_dir,args.image_dir, "intrinsic_pts.npy"))
-    chessboard_detect_np = np.load(os.path.join(path_to_image_dir,args.image_dir, "chessboard_detect.npy"))
+    objpoints = np.load(os.path.join(path_to_image_dir, args.cal_dir, "objpoints.npy"))
+    extrinsic_pts = np.load(os.path.join(path_to_image_dir, args.cal_dir, "extrinsic_pts.npy"))
+    intrinsic_pts = np.load(os.path.join(path_to_image_dir, args.cal_dir, "intrinsic_pts.npy"))
+    chessboard_detect_np = np.load(os.path.join(path_to_image_dir, args.cal_dir, "chessboard_detect.npy"))
 
 
 print("")
@@ -277,7 +278,7 @@ for cam_idx in range(num_cam):
 
 
 # Save results
-np.save(os.path.join(path_to_image_dir,args.image_dir, "D"), D)
-np.save(os.path.join(path_to_image_dir,args.image_dir, "K"), K)
-np.save(os.path.join(path_to_image_dir,args.image_dir, "R"), R)
-np.save(os.path.join(path_to_image_dir,args.image_dir, "T"), T)
+np.save(os.path.join(path_to_image_dir, args.cal_dir, "D"), D)
+np.save(os.path.join(path_to_image_dir, args.cal_dir, "K"), K)
+np.save(os.path.join(path_to_image_dir, args.cal_dir, "R"), R)
+np.save(os.path.join(path_to_image_dir, args.cal_dir, "T"), T)
