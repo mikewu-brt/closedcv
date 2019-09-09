@@ -27,7 +27,7 @@ v_pixels = 1542
 f_num = 2.0
 lens_fl_mm = 12
 
-obj_dist_mm = 5 * 1000
+obj_dist_mm = 100 * 1000
 
 baseline_m = 0.5
 
@@ -62,7 +62,7 @@ print("Hyper focal distance: {:.2f} m for 1 pixel CoC".format(optical.hyper_foca
 print("Hyper focal distance: {:.2f} m for 3 pixel CoC".format(optical.hyper_focal_dist_mm(3.0) / 1000))
 
 # Estimate the expected disparity vs distance
-disp = np.arange(10, 400)
+disp = np.arange(5, 400)
 depth = (lens.focal_length_mm() * 1.0e-3) / (sensor.pixel_size_um() * 1.0e-6) * baseline_m / disp
 plt.figure(1).clear()
 plt.plot(disp, depth)
@@ -70,3 +70,12 @@ plt.grid()
 plt.title("Disparity vs Distance")
 plt.xlabel("Disparity (pixels)")
 plt.ylabel("Distance (m)")
+
+one_pixel_err = (lens.focal_length_mm() * 1.0e-3) / (sensor.pixel_size_um() * 1.0e-6) * baseline_m / (disp - 1)
+depth_err = (one_pixel_err - depth) / depth
+plt.figure(2).clear()
+plt.plot(depth, depth_err * 100)
+plt.grid()
+plt.xlabel('Distance (m)')
+plt.ylabel("Error (%)")
+plt.title("Distance Error per Disparity pixel")

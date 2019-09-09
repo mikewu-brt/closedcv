@@ -63,7 +63,7 @@ criteria = (cv2.TERM_CRITERIA_EPS + cv2.TERM_CRITERIA_MAX_ITER, 30, 0.001)
 # Misc control
 show_images = True
 process_image_files = True
-use_rgb_image = False
+use_rgb_image = True
 force_fx_eq_fy = True
 estimate_distortion = True
 use_2step_findchessboard = False
@@ -212,7 +212,12 @@ e_flags |= cv2.CALIB_FIX_K3
 e_flags |= cv2.CALIB_FIX_K4
 e_flags |= cv2.CALIB_FIX_K5
 e_flags |= cv2.CALIB_FIX_K6
+e_flags |= cv2.CALIB_FIX_S1_S2_S3_S4
 e_flags |= cv2.CALIB_USE_EXTRINSIC_GUESS
+
+print("")
+print("i_flags = 0x{}".format(hex(i_flags)))
+print("e_flags = 0x{}".format(hex(e_flags)))
 
 K = []
 D = []
@@ -283,18 +288,18 @@ for cam_idx in range(num_cam):
                                   K[0], D[0], K[cam_idx], D[cam_idx], img_size, R_guess.copy(), T_guess, flags=e_flags)
 
         print("")
-        print("Camera Matrix round 2:")
+        print("Camera Matrix Camera 0 round 2:")
         print(K[0])
         print("")
-        print("Camera Matrix round 2:")
-        print(K[1])
+        print("Camera Matrix Camera {} round 2:".format(cam_idx))
+        print(K[cam_idx])
 
         print("")
-        print("Distortion Vector round 2:")
+        print("Distortion Vector Camera 0 round 2:")
         print(D[0])
         print("")
-        print("Distortion Vector round 2:")
-        print(D[1])
+        print("Distortion Vector Camera {} round 2:".format(cam_idx))
+        print(D[cam_idx])
 
         R.append(R1)
         T.append(T1)
@@ -303,6 +308,12 @@ for cam_idx in range(num_cam):
         print("")
         print("Rotation Matrix:")
         print(R1)
+
+        A, J = cv2.Rodrigues(R1)
+        A *= 180.0 / 3.14159
+        print("")
+        print("Rotation Vector (deg):")
+        print(A)
 
         print("")
         print("Translation Matrix:")

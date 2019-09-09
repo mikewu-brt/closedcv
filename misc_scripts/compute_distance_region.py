@@ -119,9 +119,9 @@ if not use_saved_results:
                             xe = xs + int(1.0 / scale * roi[2])
                             ys = int(1.0 / scale * roi[1])
                             ye = ys + int(1.0 / scale * roi[3])
-                            max_sum = 1.0 / scale * roi[2] * roi[3] * 3.0 * pow(2, 16)
-                            max_xs = 0
-                            max_ys = 0
+                            min_sum = 1.0 / scale * roi[2] * roi[3] * 3.0 * pow(2, 16)
+                            min_xs = 0
+                            min_ys = 0
 
                             for y_search in range(search_y_min, search_y_max+1):
 
@@ -132,29 +132,37 @@ if not use_saved_results:
 
                                 while (srcxs < xs) and (srcxe < rect_src.shape[1]):
                                     abs_diff = np.sum(np.abs(np.subtract(rect_ref[ys:ye, xs:xe], rect_src[srcys:srcye, srcxs:srcxe], dtype=np.float)))
-                                    if abs_diff < max_sum:
-                                        max_sum = abs_diff
-                                        max_xs = srcxs
-                                        max_ys = srcys
+                                    if abs_diff < min_sum:
+                                        min_sum = abs_diff
+                                        min_xs = srcxs
+                                        min_ys = srcys
 
                                     srcxs += 1
                                     srcxe += 1
 
                             if len(ref_pts) <= orientation:
                                 ref_pts.append((xs, ys))
-                                src_pts.append((max_xs, max_ys))
+                                src_pts.append((min_xs, min_ys))
                             else:
                                 ref_pts[orientation] = (xs, ys)
-                                src_pts[orientation] = (max_xs, max_ys)
+                                src_pts[orientation] = (min_xs, min_ys)
 
                             pts = []
                             pts.append(np.array(ref_pts[orientation]).reshape(1, 2))
                             pts.append(np.array(src_pts[orientation]).reshape(1, 2))
                             dis, dip = stereo.compute_distance_disparity(pts, T=P2[:, 3])
                             print("Reference ROI: ({}, {}, {}, {})".format(xs, ys, xe-xs, ye-ys))
-                            print("Source ROI top: ({}, {})".format(max_xs, max_ys))
+                            print("Source ROI top: ({}, {})".format(min_xs, min_ys))
                             print("Disparity: {}, Distance: {}".format(dip, dis))
                             print("")
+
+                            # Draw line on rectified view
+                            ym = int((ys + ye) / 2.0)
+                            updated_overlay = cv2.line(rect_overlay.copy(), (0, ym), (rect_overlay.shape[1], ym), (0, 255, 0), 1)
+                            updated_overlay = cv2.line(updated_overlay, (0, ys), (rect_overlay.shape[1], ys), (255, 0, 0), 1)
+                            updated_overlay = cv2.line(updated_overlay, (0, ye), (rect_overlay.shape[1], ye), (0, 0, 255), 1)
+                            img = cv2.resize(updated_overlay, dsize=None, fx=scale, fy=scale)
+                            cv2.imshow("Rect Overlay", img)
 
         orientation += 1
 
@@ -199,7 +207,7 @@ plt.scatter(-disparity[0][i], new_gt[i])
 plt.grid()
 plt.xlabel("Disparity (pixels)")
 plt.ylabel("Distance (m)")
-plt.title("Disparity / Distance")
+plt.title("Disparity / Distance - {}".format(args.cal_dir))
 plt.legend(("Computed Distance", "Ground Truth"))
 
 
@@ -219,7 +227,7 @@ plt.plot(new_gt[i], (g4-new_gt)[i])
 plt.grid()
 plt.xlabel("Distance (m)")
 plt.ylabel("Error (m)")
-plt.title("Distance Error")
+plt.title("Distance Error - {}".format(args.cal_dir))
 plt.legend(("Error", "+2 pixel error", "+1 pixel error", "-1 pixel error", "-2 pixel error"))
 
 
@@ -229,7 +237,7 @@ plt.plot(new_gt[i], pixel_err[i])
 plt.grid()
 plt.xlabel("Distance (m)")
 plt.ylabel("Error (pixels)")
-plt.title("Pixel error vs distance")
+plt.title("Pixel error vs distance - {}".format(args.cal_dir))
 
 plt.figure(13).clear()
 diff = src_pts - ref_pts
@@ -237,6 +245,6 @@ plt.scatter(-diff[:, 0], diff[:, 1])
 plt.grid()
 plt.xlabel("Disparity X (pixels)")
 plt.ylabel("Disparity Y (pixels)")
-plt.title("Y Disparity Error - Search range ({}, {})".format(search_y_min, search_y_max))
+plt.title("Y Disparity Error - Search range ({}, {}) - {}".format(search_y_min, search_y_max, args.cal_dir))
 
 cv2.destroyAllWindows()
