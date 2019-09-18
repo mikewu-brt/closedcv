@@ -89,10 +89,9 @@ objp[:,:2] = np.mgrid[0:nx,0:ny].T.reshape(-1,2) * (checker_size_mm * 1.0e-3)
 objpoints = []                  # 3D points in World space (relative)
 extrinsic_pts = np.empty((num_cam, 1, nx * ny, 1, 2))     # Image points
 intrinsic_pts = []
-for cam_idx in range(num_cam):
-    intrinsic_pts.append([])
 chessboard_detect = []
 for cam_idx in range(num_cam):
+    intrinsic_pts.append([])
     chessboard_detect.append([])
 
 corners2 = np.empty((num_cam, 1, nx*ny, 1, 2), dtype=np.float32)
@@ -104,8 +103,7 @@ if process_image_files:
         chessboard_found = True
         # Load imageos
         for cam_idx in range(num_cam):
-            fname = os.path.join(path_to_image_dir,args.image_dir, setupInfo.RigInfo.image_filename[cam_idx].format(orientation))
-            raw = []
+            fname = os.path.join(path_to_image_dir, args.image_dir, setupInfo.RigInfo.image_filename[cam_idx].format(orientation))
             try:
                 raw = np.load(fname)
             except:
@@ -163,11 +161,11 @@ if process_image_files:
             objpoints.append(objp)
         orientation += 1
 
-    chessboard_detect_np = np.asarray(chessboard_detect)
     np.save(os.path.join(path_to_image_dir, args.cal_dir, "objpoints"), objpoints)
     np.save(os.path.join(path_to_image_dir, args.cal_dir, "extrinsic_pts"), extrinsic_pts)
-    np.save(os.path.join(path_to_image_dir, args.cal_dir, "intrinsic_pts"), intrinsic_pts)
-    np.save(os.path.join(path_to_image_dir, args.cal_dir, "chessboard_detect"), chessboard_detect_np)
+    for cam_idx in range(num_cam):
+        np.save(os.path.join(path_to_image_dir, args.cal_dir, "intrinsic_pts{}".format(cam_idx)), intrinsic_pts[cam_idx])
+        np.save(os.path.join(path_to_image_dir, args.cal_dir, "chessboard_detect{}".format(cam_idx)), chessboard_detect[cam_idx])
 
     imgpoints_new = np.squeeze(extrinsic_pts)
     imgpoints1 = imgpoints_new[0,:,:,:]
@@ -179,8 +177,15 @@ if process_image_files:
 else:
     objpoints = np.load(os.path.join(path_to_image_dir, args.cal_dir, "objpoints.npy"))
     extrinsic_pts = np.load(os.path.join(path_to_image_dir, args.cal_dir, "extrinsic_pts.npy"))
-    intrinsic_pts = np.load(os.path.join(path_to_image_dir, args.cal_dir, "intrinsic_pts.npy"))
-    chessboard_detect_np = np.load(os.path.join(path_to_image_dir, args.cal_dir, "chessboard_detect.npy"))
+    intrinsic_pts = []
+    rvecs = []
+    tvecs = []
+    chessboard_detect = []
+    for cam_idx in range(num_cam):
+        intrinsic_pts.append(np.load(os.path.join(path_to_image_dir, args.cal_dir, "intrinsic_pts{}.npy".format(cam_idx))))
+        rvecs.append(np.load(os.path.join(path_to_image_dir, args.cal_dir, "rvecs{}.npy".format(cam_idx))))
+        tvecs.append(np.load(os.path.join(path_to_image_dir, args.cal_dir, "tvecs{}.npy".format(cam_idx))))
+        chessboard_detect.append(np.load(os.path.join(path_to_image_dir, args.cal_dir, "chessboard_detect{}.npy".format(cam_idx))))
 
 
 print("")
@@ -193,6 +198,9 @@ R_guess = np.identity(3)
 i_flags = cv2.CALIB_USE_INTRINSIC_GUESS
 i_flags |= cv2.CALIB_ZERO_TANGENT_DIST
 i_flags |= cv2.CALIB_FIX_K3
+#i_flags |= cv2.CALIB_RATIONAL_MODEL
+#i_flags |= cv2.CALIB_THIN_PRISM_MODEL
+
 if not estimate_distortion:
     i_flags |= cv2.CALIB_ZERO_TANGENT_DIST
     i_flags |= cv2.CALIB_FIX_K1
@@ -201,6 +209,7 @@ if not estimate_distortion:
     i_flags |= cv2.CALIB_FIX_K4
     i_flags |= cv2.CALIB_FIX_K5
     i_flags |= cv2.CALIB_FIX_K6
+    i_flags |= cv2.CALIB_FIX_S1_S2_S3_S4
 if force_fx_eq_fy:
     i_flags |= cv2.CALIB_FIX_ASPECT_RATIO
 
@@ -224,6 +233,9 @@ D = []
 R = []
 T = []
 view_error = []
+stereo_view_error = []
+rvecs = []
+tvecs = []
 for cam_idx in range(num_cam):
     print("")
     print("Compute intrisics for cam {}".format(cam_idx))
@@ -239,10 +251,12 @@ for cam_idx in range(num_cam):
         obj_pts.append(objp)
         img_pts.append(intrinsic_pts[cam_idx][capture_idx])
 
-    ret, K1, D1, rvecs1, tvecs1 = cv2.calibrateCamera(obj_pts, img_pts, img_size, K_guess.copy(), None, flags=i_flags, criteria=criteria)
+    reproj_error, K1, D1, rvecs1, tvecs1, I, E, viewErr = cv2.calibrateCameraExtended(obj_pts, img_pts, img_size, K_guess.copy(), None, flags=i_flags, criteria=criteria)
     K.append(K1)
     D.append(D1)
-
+    view_error.append(viewErr)
+    rvecs.append(rvecs1)
+    tvecs.append(tvecs1)
 
     # Extrinsic data - pair up  ref cam with all the other cams independently
     imgpts = []
@@ -251,14 +265,14 @@ for cam_idx in range(num_cam):
     count_ref = 0
     count_aux = 0
     if cam_idx != 0:
-        for i in range(chessboard_detect_np.shape[1]):
-            if (chessboard_detect_np[0,i] == True) and (chessboard_detect_np[cam_idx,i] == True):
+        for i in range(len(chessboard_detect[0])):
+            if chessboard_detect[0][i] and chessboard_detect[cam_idx][i]:
                 imgpts_ref.append(intrinsic_pts[0][count_ref])
                 imgpts.append(intrinsic_pts[cam_idx][count_aux])
                 objpoints.append(objp)
-            if chessboard_detect_np[0,i] == True:
+            if chessboard_detect[0][i]:
                 count_ref += 1
-            if chessboard_detect_np[cam_idx,i] == True:
+            if chessboard_detect[cam_idx][i]:
                 count_aux += 1
 
     print("")
@@ -280,6 +294,10 @@ for cam_idx in range(num_cam):
     print("")
     print("Distortion Vector round 1:")
     print(D1)
+
+    print("")
+    print("Reprojection Error {}".format(reproj_error))
+
 
 
     if cam_idx != 0:
@@ -303,7 +321,7 @@ for cam_idx in range(num_cam):
 
         R.append(R1)
         T.append(T1)
-        view_error.append(viewErr)
+        stereo_view_error.append(viewErr)
 
         print("")
         print("Rotation Matrix:")
@@ -333,6 +351,13 @@ np.save(os.path.join(path_to_image_dir, args.cal_dir, "D"), D)
 np.save(os.path.join(path_to_image_dir, args.cal_dir, "K"), K)
 np.save(os.path.join(path_to_image_dir, args.cal_dir, "R"), R)
 np.save(os.path.join(path_to_image_dir, args.cal_dir, "T"), T)
+
+for cam_idx in range(num_cam):
+    np.save(os.path.join(path_to_image_dir, args.cal_dir, "rvecs{}".format(cam_idx)), rvecs[cam_idx])
+    np.save(os.path.join(path_to_image_dir, args.cal_dir, "tvecs{}".format(cam_idx)), tvecs[cam_idx])
+    np.save(os.path.join(path_to_image_dir, args.cal_dir, "view_error{}".format(cam_idx)), np.squeeze(view_error[cam_idx]))
+    if cam_idx > 0:
+        np.save(os.path.join(path_to_image_dir, args.cal_dir, "stereo_view_error{}".format(cam_idx)), np.squeeze(stereo_view_error[cam_idx-1]))
 
 D_np = np.asarray(D)
 K_np = np.asarray(K)

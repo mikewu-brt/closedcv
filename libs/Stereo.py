@@ -20,7 +20,7 @@ import cv2
 
 class Stereo:
 
-    def __init__(self, image_dir, img_shape=None, use_matlab=False):
+    def __init__(self, image_dir, img_shape=None):
         """
         Initialize camera matrices.
 
@@ -40,40 +40,6 @@ class Stereo:
             # Read an image file to determine the size
             img_shape = (self.__setup.SensorInfo.width, self.__setup.SensorInfo.height)
         self.__img_shape = img_shape
-
-        if use_matlab:
-            self.__K[0][0,0] = 3522.11043118064
-            self.__K[0][1,1] = 3529.51877942593
-            self.__K[0][0,2] = 1037.39003651303
-            self.__K[0][1,2] = 744.847974076580
-
-            self.__D[0][0,0] = 0.000828449353220118
-            self.__D[0][0,1] = 0.564832800327072
-
-            self.__K[1][0,0] = 3525.57127138060
-            self.__K[1][1,1] = 3531.78609580427
-            self.__K[1][0,2] = 1029.57935241333
-            self.__K[1][1,2] = 714.320168785033
-
-            self.__D[1][0,0] = 0.00131862442366295
-            self.__D[1][0,1] = 0.412993284318181
-
-            self.__R[1][0,0] = 0.999677135226612
-            self.__R[1][0,1] = 0.0109213444019446
-            self.__R[1][0,2] = 0.0229423089851210
-
-            self.__R[1][1,0] = -0.0108730582967757
-            self.__R[1][1,1] = 0.999938403591646
-            self.__R[1][1,2] = -0.00222836843124470
-
-            self.__R[1][2,0] = -0.0229652326003802
-            self.__R[1][2,1] = 0.00197819590651822
-            self.__R[1][2,2] = 0.999734307119930
-
-            self.__R[1] = self.__R[1].T
-            C = np.array([[524.156863841036], [9.77760298880491], [11.8390457173923]])
-            #self.__T[1] = -np.matmul(self.__R[1], C)
-            self.__T[1] = -C
 
 
     @staticmethod
@@ -114,7 +80,7 @@ class Stereo:
 
         :return F: Fundamental matrix
         """
-        P1 = np.matmul(K1, np.hstack((np.identity(3), np.zeros((3, 1)))))
+        P1 = Stereo.compute_projection_matrix(K1, np.identity(3), np.zeros((3, 1)))
         P2 = Stereo.compute_projection_matrix(K2, R, T)
         Pp = np.vstack((np.linalg.inv(K1), np.zeros(3)))
         C = np.zeros((4, 1))

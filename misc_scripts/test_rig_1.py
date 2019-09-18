@@ -72,10 +72,14 @@ plt.xlabel("Disparity (pixels)")
 plt.ylabel("Distance (m)")
 
 one_pixel_err = (lens.focal_length_mm() * 1.0e-3) / (sensor.pixel_size_um() * 1.0e-6) * baseline_m / (disp - 1)
+one_half_pixel_err = (lens.focal_length_mm() * 1.0e-3) / (sensor.pixel_size_um() * 1.0e-6) * baseline_m / (disp - 0.5)
 depth_err = (one_pixel_err - depth) / depth
+depth_err_1_2 = (one_half_pixel_err - depth) / depth
 plt.figure(2).clear()
 plt.plot(depth, depth_err * 100)
+plt.plot(depth, depth_err_1_2 * 100)
 plt.grid()
 plt.xlabel('Distance (m)')
 plt.ylabel("Error (%)")
-plt.title("Distance Error per Disparity pixel")
+plt.title("Distance Error per Disparity error")
+plt.legend(["1 pixel error", "1/2 pixel error"])
