@@ -251,7 +251,7 @@ for cam_idx in range(num_cam):
         obj_pts.append(objp)
         img_pts.append(intrinsic_pts[cam_idx][capture_idx])
 
-    reproj_error, K1, D1, rvecs1, tvecs1, I, E, viewErr = cv2.calibrateCameraExtended(obj_pts, img_pts, img_size, K_guess.copy(), None, flags=i_flags, criteria=criteria)
+    reproj_error, K1, D1, rvecs1, tvecs1, I, E, viewErr = cv2.calibrateCameraExtended(obj_pts, img_pts, img_size, K_guess.copy(), None, flags=i_flags)
     K.append(K1)
     D.append(D1)
     view_error.append(viewErr)
