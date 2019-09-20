@@ -19,13 +19,49 @@ import matplotlib as matplot
 matplot.use('TkAgg')
 import matplotlib.pyplot as plt
 
-sensor_type = "IMX265"
-pixel_size_um = 3.45
-h_pixels = 2056
-v_pixels = 1542
+# System Configuration setting
+#sc = "sc0_2a"
+#sc = "lucid_16mm"
+#sc = "lucid_25mm"
+sc = "lucid_35mm"
 
-f_num = 2.0
-lens_fl_mm = 12
+
+if sc == "sc0_2a":
+    sensor_type = "IMX265"
+    pixel_size_um = 3.45
+    h_pixels = 2056
+    v_pixels = 1542
+    f_num = 2.0
+    lens_fl_mm = 12
+
+elif sc == "lucid_16mm":
+    sensor_type = "IMX428"
+    pixel_size_um = 4.5
+    h_pixels = 3208
+    v_pixels = 2200
+    f_num = 2.8
+    lens_fl_mm = 16
+
+elif sc == "lucid_25mm":
+    sensor_type = "IMX428"
+    pixel_size_um = 4.5
+    h_pixels = 3208
+    v_pixels = 2200
+    f_num = 2.8
+    lens_fl_mm = 25
+
+elif sc == "lucid_35mm":
+    sensor_type = "IMX428"
+    pixel_size_um = 4.5
+    h_pixels = 3208
+    v_pixels = 2200
+    f_num = 2.8
+    lens_fl_mm = 35
+
+else:
+    print("Unknown config")
+    exit(1)
+
 
 obj_dist_mm = 100 * 1000
 
@@ -35,7 +71,7 @@ optical = Optical(h_pixels, v_pixels, pixel_size_um, f_num, lens_fl_mm)
 sensor = optical.sensor
 lens = optical.lens
 
-print("Sensor information - {}".format(sensor_type))
+print("Sensor information: {}, system config: {}".format(sensor_type, sc))
 print("Pixel size {} um -> {:.3f} lp/mm".format(pixel_size_um, sensor.resolution_lp_mm()))
 
 sensor_size = sensor.size_mm()
