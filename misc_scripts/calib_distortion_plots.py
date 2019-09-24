@@ -235,14 +235,17 @@ for cam_idx in range(num_cam):
             plotx.clear()
             plt.gca().invert_yaxis()
             if reverse_y_axis:
-                plt.scatter(imgpoints_x, imgpoints_y[::-1], color='k')
-                plt.scatter(imgpoints_nodist[:, 0, 0], imgpoints_nodist[::-1, 0, 1], color='g')
+                plt.scatter(imgpoints_x, imgpoints_y[::-1], color='k', s=1)
+                plt.scatter(imgpoints_nodist[:, 0, 0], imgpoints_nodist[::-1, 0, 1], color='g', s=1)
             else:
-                plt.scatter(imgpoints_x, imgpoints_y, color='k')
-                plt.scatter(imgpoints_nodist[:, 0, 0], imgpoints_nodist[:, 0, 1], color='g')
+                plt.scatter(imgpoints_x, imgpoints_y, color='k', s=1)
+                plt.scatter(imgpoints_nodist[:, 0, 0], imgpoints_nodist[:, 0, 1], color='g', s=1)
             plt.draw()
 
             print("")
+
+            plt.figure(4)
+            plt.title("Click mouse here to advance, 'q' to exit")
 
             if plt.waitforbuttonpress(-1.0):
                 print("Exiting")
