@@ -26,7 +26,7 @@ import matplotlib.pyplot as plt
 
 parser = argparse.ArgumentParser(description="Stereo Calibrate")
 parser.add_argument('--image_dir', default='Distance_Aug15_0')
-parser.add_argument('--cal_dir', default='Calibration_Aug15_large_board')
+parser.add_argument('--cal_dir', default='Calibration_Aug23')
 
 args, unknown = parser.parse_known_args()
 if unknown:
@@ -68,10 +68,11 @@ while True:
             gray_ref = gray.copy()
 
         #print("Searching {}".format(fname))
-        ret, corners = cv2.findChessboardCorners(gray, (nx, ny), None)
+        ret, corners = cv2.findChessboardCornersSB(gray, (nx, ny))
         if ret:
             #print("Search Done")
-            corners2[cam_idx, 0, :, :, :] = cv2.cornerSubPix(gray, corners, (11, 11), (-1, -1), criteria)
+            #corners2[cam_idx, 0, :, :, :] = cv2.cornerSubPix(gray, corners, (11, 11), (-1, -1), criteria)
+            corners2[cam_idx, 0] = corners
         else:
             #print("Chessboard not found in {}".format(fname))
             chessboard_found = False

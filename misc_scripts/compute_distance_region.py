@@ -14,6 +14,7 @@
 """
 import argparse
 from libs.Stereo import *
+from libs.Image import *
 import importlib
 import matplotlib as matplot
 matplot.use('TkAgg')
@@ -49,22 +50,19 @@ max_disparity = 800
 ####################a
 
 stereo = Stereo(args.cal_dir)
-
 setup_info = importlib.import_module("{}.setup".format(args.image_dir))
-num_cam = setup_info.RigInfo.image_filename.size
+image_helper = Image(setup_info, args.image_dir)
+
+num_cam = image_helper.num_cam()
 all_files_read = False
 
 if not use_saved_results:
     while not all_files_read:
         for cam_idx in range(num_cam):
-            fname = os.path.join(args.image_dir, setup_info.RigInfo.image_filename[cam_idx].format(orientation))
-            try:
-                raw = np.load(fname)
-            except:
+            img, _ = image_helper.read_image_file(cam_idx, orientation, scale_to_8bit=False)
+            if img is None:
                 all_files_read = True
                 break
-
-            img = cv2.cvtColor(raw.copy(), cv2.COLOR_BayerBG2BGR)
 
             if cam_idx == 0:
                 # save reference image
@@ -171,18 +169,16 @@ if not use_saved_results:
     i = input("Do you wish to save the results (Y/n): ")
     if i == 'Y':
         print("Saving results")
-        np.save(os.path.join(args.image_dir, "ref_pts"), ref_pts)
-        np.save(os.path.join(args.image_dir, "src_pts"), src_pts)
+        image_helper.save_np_file("ref_pts", ref_pts)
+        image_helper.save_np_file("src_pts", src_pts)
 
 
 else:
     print("Using saved results")
 
     # Load results from files
-#    disparity = np.load(os.path.join(args.image_dir, "disparity.npy"))
-#    distance = np.load(os.path.join(args.image_dir, "distance.npy"))
-    ref_pts = np.load(os.path.join(args.image_dir, "ref_pts.npy"))
-    src_pts = np.load(os.path.join(args.image_dir, "src_pts.npy"))
+    ref_pts = image_helper.load_np_file("ref_pts.npy")
+    src_pts = image_helper.load_np_file("src_pts.npy")
     R1, R2, P1, P2, Q, roi1, roi2 = stereo.rectification_matrix(1)
 
 # Compute results
@@ -193,7 +189,7 @@ distance, disparity = stereo.compute_distance_disparity(pts, T=P2[:, 3])
 
 # Plot results
 # Correct for angles in the ground truth measurements
-gt = np.load(os.path.join(args.image_dir, "ground_truth.npy"))
+gt = image_helper.load_np_file("ground_truth.npy")
 delta = np.linalg.norm(ref_pts - P2[:2, 2], axis=1)
 theta = np.arctan(delta / P2[0,0])
 new_gt = np.cos(theta) * gt[0:len(theta)]

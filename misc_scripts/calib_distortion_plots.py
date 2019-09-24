@@ -20,6 +20,7 @@ import importlib
 import argparse
 import math
 import sys
+from libs.Image import *
 import matplotlib as matplot
 matplot.use('TkAgg')
 import matplotlib.pyplot as plt
@@ -38,13 +39,15 @@ if unknown:
 ####################
 display_size = 1/2
 
-setupInfo = importlib.import_module("{}.setup".format(args.image_dir))
 
 # check if env variable PATH_TO_IMAGE_DIR is set, if not use relative path
 path_to_image_dir = os.getenv("PATH_TO_IMAGE_DIR")
 if path_to_image_dir is None:
     path_to_image_dir = '.'
 
+setupInfo = importlib.import_module("{}.setup".format(args.image_dir))
+image_dir = args.image_dir
+image_helper = Image(setupInfo, image_dir)
 
 # Optical parameters
 fl_mm = setupInfo.LensInfo.fl_mm
@@ -66,7 +69,6 @@ objp[:, :2] = np.mgrid[0:nx, 0:ny].T.reshape(-1, 2) * (checker_size_mm * 1.0e-3)
 # Termination criteria
 criteria = (cv2.TERM_CRITERIA_EPS + cv2.TERM_CRITERIA_MAX_ITER, 30, 0.001)
 
-image_dir = args.image_dir
 
 intrinsic_pts = []
 rvecs = []
@@ -91,11 +93,7 @@ reverse_y_axis = False
 
 ######################
 
-num_cam = cam_position_m.shape[0]
-if num_cam != setupInfo.RigInfo.image_filename.shape[0]:
-    print("Number of camera positions and number of filenames must match")
-    sys.exit(1)
-
+num_cam = image_helper.num_cam()
 
 # Open a figure to avoid cv2.imshow crash
 plt.figure(1)
@@ -170,17 +168,11 @@ for cam_idx in range(num_cam):
         imgpoints_x = intrinsic_pts[cam_idx][i][:, 0, 0]
         imgpoints_y = intrinsic_pts[cam_idx][i][:, 0, 1]
         image_index = np.where(chessboard_detect[cam_idx])
-        fname = os.path.join(path_to_image_dir, image_dir,
-                             setupInfo.RigInfo.image_filename[cam_idx].format(image_index[0][i]))
-        raw = np.load(fname)
-        raw = raw.astype(np.float32) / 256.0
-        raw = raw.astype(np.uint8)
-        print(fname)
-        img2 = cv2.cvtColor(raw, cv2.COLOR_BayerBG2BGR)
+
+        img2, gray = image_helper.read_image_file(os.path.join(path_to_image_dir, image_dir), cam_idx, image_index[0][i])
         img2 = cv2.resize(img2, None, fx=display_size, fy=display_size)
 
         # ##########undistort and check #############
-        gray = cv2.cvtColor(raw, cv2.COLOR_BayerBG2GRAY)
         gray = gray.astype(np.float32)
         # undistort the image
         undistorted_img = cv2.undistort(gray, K[cam_idx], D[cam_idx], None, K[cam_idx])

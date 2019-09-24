@@ -1,22 +1,21 @@
-"""
- * Copyright (c) 2018, The LightCo
- * All rights reserved.
- * Redistribution and use in source and binary forms, with or without
- * modification, are strictly prohibited without prior permission of
- * The LightCo.
- *
- * @author  Chuck Stanski
- * @version V1.0.0
- * @date    July 2019
- * @brief
- *  Stereo calibration test script
- *
-"""
+#  Copyright (c) 2019, The LightCo
+#  All rights reserved.
+#  Redistribution and use in source and binary forms, with or without
+#  modification, are strictly prohibited without prior permission of
+#  The LightCo.
+#
+#  @author  cstanski
+#  @version V1.0.0
+#  @date    Sep 2019
+#  @brief
+#  Stereo calibration test script
+
 import cv2
 import numpy as np
 import os
 import importlib
 import argparse
+from libs.Image import *
 import matplotlib as matplot
 matplot.use('TkAgg')
 import matplotlib.pyplot as plt
@@ -38,11 +37,7 @@ if unknown:
 ####################
 
 setupInfo = importlib.import_module("{}.setup".format(args.image_dir))
-
-# check if env variable PATH_TO_IMAGE_DIR is set, if not use relative path
-path_to_image_dir = os.getenv("PATH_TO_IMAGE_DIR")
-if path_to_image_dir == None:
-    path_to_image_dir = '.'
+image_helper = Image(setupInfo, args.image_dir)
 
 # Optical parameters
 fl_mm = setupInfo.LensInfo.fl_mm
@@ -69,11 +64,7 @@ display_size = 1/2
 
 ######################
 
-num_cam = cam_position_m.shape[0]
-if num_cam != setupInfo.RigInfo.image_filename.shape[0]:
-    print("Number of camera positions and number of filenames must match")
-    exit(1)
-
+num_cam = image_helper.num_cam()
 
 # Open a figure to avoid cv2.imshow crash
 plt.figure(1)
@@ -98,20 +89,12 @@ if process_image_files:
         # Load images
         for cam_idx in range(num_cam):
 
-            fname = os.path.join(path_to_image_dir,args.image_dir, setupInfo.RigInfo.image_filename[cam_idx].format(orientation))
-            print(fname)
-            try:
-                raw = np.load(fname)
-            except:
+            img, gray = image_helper.read_image_file(cam_idx, orientation)
+            if img is None:
                 all_files_read = True
                 break
 
-            raw = raw.astype(np.float32)/ 256.0
-            raw = raw.astype(np.uint8)
-            gray = cv2.cvtColor(raw, cv2.COLOR_BayerBG2GRAY)
-            img = cv2.cvtColor(raw, cv2.COLOR_BayerBG2BGR)
-
-            print("Searching {}".format(fname))
+            print("Searching")
             #ret, corners = cv2.findChessboardCorners(gray, (nx, ny), None)
             ret, corners = cv2.findChessboardCornersSB(gray, (nx, ny))
             if ret:
@@ -147,17 +130,18 @@ if process_image_files:
                 else:
                     imgpoints = np.concatenate((imgpoints, corners2.copy()), axis=1)
         else:
-            print("Chessboard not found in {}".format(fname))
+            print("Chessboard not found")
             if show_images:
                 img2 = cv2.resize(img, None, fx=display_size, fy=display_size)
                 cv2.imshow("Bad Image {}".format(cam_idx), img2)
                 cv2.waitKey(500)
+        print("")
         chessboard_detect.append(chessboard_found)
         orientation += 1
 
-    np.save(os.path.join(path_to_image_dir, args.image_dir, "objpoints"), objpoints)
-    np.save(os.path.join(path_to_image_dir,args.image_dir, "imgpoints"), imgpoints)
-    np.save(os.path.join(path_to_image_dir,args.image_dir, "chessboard_detect"), chessboard_detect)
+    image_helper.save_np_file("objpoints", objpoints)
+    image_helper.save_np_file("imgpoints", imgpoints)
+    image_helper.save_np_file("chessboard_detect", chessboard_detect)
 
     imgpoints_new = np.squeeze(imgpoints)
     imgpoints1 = imgpoints_new[0,:,:,:]
@@ -165,12 +149,12 @@ if process_image_files:
     imgpoints1_new = np.reshape(imgpoints1,[-1,2])
     imgpoints2_new = np.reshape(imgpoints2,[-1,2])
 
-    np.savetxt(os.path.join(path_to_image_dir,args.image_dir,"imgpoint1.txt"), imgpoints1_new)
-    np.savetxt(os.path.join(path_to_image_dir,args.image_dir,"imgpoint2.txt"), imgpoints2_new)
+    image_helper.save_text_file("imgpoint1.txt", imgpoints1_new)
+    image_helper.save_text_file("imgpoint2.txt", imgpoints2_new)
 else:
-    objpoints = np.load(os.path.join(path_to_image_dir,args.image_dir, "objpoints.npy"))
-    imgpoints = np.load(os.path.join(path_to_image_dir,args.image_dir, "imgpoints.npy"))
-    chessboard_detect = np.load(os.path.join(path_to_image_dir,args.image_dir, "chessboard_detect.npy"))
+    objpoints = image_helper.load_np_file("objpoints.npy")
+    imgpoints = image_helper.load_np_file("imgpoints.npy")
+    chessboard_detect = image_helper.load_np_file("chessboard_detect.npy")
 
 
 print("")
@@ -280,12 +264,12 @@ for cam_idx in range(num_cam):
 
 
 # Save results
-np.save(os.path.join(path_to_image_dir,args.image_dir, "D"), D)
-np.save(os.path.join(path_to_image_dir,args.image_dir, "K"), K)
-np.save(os.path.join(path_to_image_dir,args.image_dir, "R"), R)
-np.save(os.path.join(path_to_image_dir,args.image_dir, "T"), T)
-np.save(os.path.join(path_to_image_dir,args.image_dir, "tvecs"), tvecs)
-np.save(os.path.join(path_to_image_dir,args.image_dir, "rvecs"), rvecs)
+image_helper.save_np_file("D", D)
+image_helper.save_np_file("K", K)
+image_helper.save_np_file("R", R)
+image_helper.save_np_file("T", T)
+image_helper.save_np_file("tvecs", tvecs)
+image_helper.save_np_file("rvecs", rvecs)
 
 
 D_np = np.asarray(D)
@@ -293,10 +277,10 @@ K_np = np.asarray(K)
 K_np = np.reshape(K_np,[-1,2])
 R_np = np.asarray(R)
 T_np = np.asarray(T)
-np.savetxt(os.path.join(path_to_image_dir,args.image_dir,"D.txt"), np.squeeze(D_np))
-np.savetxt(os.path.join(path_to_image_dir,args.image_dir,"K.txt"), K_np)
-np.savetxt(os.path.join(path_to_image_dir,args.image_dir,"R.txt"), np.reshape(R_np,[-1,2]))
-np.savetxt(os.path.join(path_to_image_dir,args.image_dir,"T.txt"), np.squeeze(T_np))
+image_helper.save_text_file("D.txt", np.squeeze(D_np))
+image_helper.save_text_file("K.txt", K_np)
+image_helper.save_text_file("R.txt", np.reshape(R_np, [-1, 2]))
+image_helper.save_text_file("T.txt", np.squeeze(T_np))
 
 
 

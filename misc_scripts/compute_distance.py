@@ -52,7 +52,7 @@ ham_distance = []
 pts_ref = []
 pts_src = []
 
-setup_info = importlib.import_module("{}.setup".format(args.cal_dir))
+setup_info = importlib.import_module("{}.setup".format(args.image_dir))
 num_cam =setup_info.RigInfo.image_filename.size
 orientation = 0
 all_files_read = False

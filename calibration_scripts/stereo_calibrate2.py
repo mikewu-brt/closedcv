@@ -1,22 +1,21 @@
-"""
- * Copyright (c) 2018, The LightCo
- * All rights reserved.
- * Redistribution and use in source and binary forms, with or without
- * modification, are strictly prohibited without prior permission of
- * The LightCo.
- *
- * @author  Chuck Stanski
- * @version V1.0.0
- * @date    July 2019
- * @brief
- *  Stereo calibration test script
- *
-"""
+#  Copyright (c) 2019, The LightCo
+#  All rights reserved.
+#  Redistribution and use in source and binary forms, with or without
+#  modification, are strictly prohibited without prior permission of
+#  The LightCo.
+#
+#  @author  cstanski
+#  @version V1.0.0
+#  @date    Sep 2019
+#  @brief
+#  Stereo calibration test script
+
 import cv2
 import numpy as np
 import os
 import importlib
 import argparse
+from libs.Image import *
 import matplotlib as matplot
 matplot.use('TkAgg')
 import matplotlib.pyplot as plt
@@ -26,7 +25,7 @@ import matplotlib.pyplot as plt
 # Input Parameters
 ####################
 
-parser = argparse.ArgumentParser(description="Stereo Calibrate")
+parser = argparse.ArgumentParser(description="Stereo Calibrate 2")
 parser.add_argument('--image_dir', default='Calibration_Aug23')
 parser.add_argument('--cal_dir', default='Calibration_Aug23')
 
@@ -36,14 +35,15 @@ if unknown:
 
 ####################
 
-setupInfo = importlib.import_module("{}.setup".format(args.image_dir))
-img_size = (setupInfo.SensorInfo.width, setupInfo.SensorInfo.height)
-
 # check if env variable PATH_TO_IMAGE_DIR is set, if not use relative path
 path_to_image_dir = os.getenv("PATH_TO_IMAGE_DIR")
 if path_to_image_dir == None:
     path_to_image_dir = '.'
 
+setupInfo = importlib.import_module("{}.setup".format(args.image_dir))
+img_size = (setupInfo.SensorInfo.width, setupInfo.SensorInfo.height)
+image_helper = Image(setupInfo, args.image_dir)
+cal_file_helper = Image(None, args.cal_dir)
 
 # Optical parameters
 fl_mm = setupInfo.LensInfo.fl_mm
@@ -72,11 +72,7 @@ display_size = 1/2
 
 ######################
 
-num_cam = cam_position_m.shape[0]
-if num_cam != setupInfo.RigInfo.image_filename.shape[0]:
-    print("Number of camera positions and number of filenames must match")
-    exit(1)
-
+num_cam = image_helper.num_cam()
 
 # Open a figure to avoid cv2.imshow crash
 plt.figure(1)
@@ -103,19 +99,12 @@ if process_image_files:
         chessboard_found = True
         # Load imageos
         for cam_idx in range(num_cam):
-            fname = os.path.join(path_to_image_dir, args.image_dir, setupInfo.RigInfo.image_filename[cam_idx].format(orientation))
-            try:
-                raw = np.load(fname)
-            except:
+            img, gray = image_helper.read_image_file(cam_idx, orientation)
+            if img is None:
                 all_files_read = True
                 break
 
-            raw = raw.astype(np.float32) / 256.0
-            raw = raw.astype(np.uint8)
-            gray = cv2.cvtColor(raw, cv2.COLOR_BayerBG2GRAY)
-            img = cv2.cvtColor(raw, cv2.COLOR_BayerBG2BGR)
-
-            print("Searching {}".format(fname))
+            print("Searching")
             if use_2step_findchessboard == True:
                 if use_rgb_image == False:
                     ret, corners = cv2.findChessboardCorners(gray, (nx, ny), None)
@@ -129,7 +118,8 @@ if process_image_files:
 
 
             if ret:
-                print("Search Done")
+                print("Chessboard Found")
+                print("")
                 chessboard_detect[cam_idx].append(True)
                 if use_2step_findchessboard == True:
                     corners2[cam_idx, 0, :, :, :] = cv2.cornerSubPix(gray, corners, (11, 11), (-1, -1), criteria)
@@ -142,7 +132,7 @@ if process_image_files:
                     cv2.imshow("Image {}".format(cam_idx), img2)
                     cv2.waitKey(500)
             else:
-                print("Chessboard not found in {}".format(fname))
+                print("Chessboard not found")
                 chessboard_found = False
                 chessboard_detect[cam_idx].append(False)
                 if show_images:
@@ -161,31 +151,29 @@ if process_image_files:
             objpoints.append(objp)
         orientation += 1
 
-    np.save(os.path.join(path_to_image_dir, args.cal_dir, "objpoints"), objpoints)
-    np.save(os.path.join(path_to_image_dir, args.cal_dir, "extrinsic_pts"), extrinsic_pts)
+    cal_file_helper.save_np_file("objpoints", objpoints)
+    cal_file_helper.save_np_file("extrinsic_pts", extrinsic_pts)
     for cam_idx in range(num_cam):
-        np.save(os.path.join(path_to_image_dir, args.cal_dir, "intrinsic_pts{}".format(cam_idx)), intrinsic_pts[cam_idx])
-        np.save(os.path.join(path_to_image_dir, args.cal_dir, "chessboard_detect{}".format(cam_idx)), chessboard_detect[cam_idx])
+        cal_file_helper.save_np_file("intrinsic_pts{}".format(cam_idx), intrinsic_pts[cam_idx])
+        cal_file_helper.save_np_file("chessboard_detect{}".format(cam_idx), chessboard_detect[cam_idx])
 
-    imgpoints_new = np.squeeze(extrinsic_pts)
-    imgpoints1 = imgpoints_new[0,:,:,:]
-    imgpoints2 = imgpoints_new[1,:,:,:]
-    imgpoints1_new = np.reshape(imgpoints1,[-1,2])
-    imgpoints2_new = np.reshape(imgpoints2,[-1,2])
-    np.savetxt(os.path.join(path_to_image_dir,args.image_dir,"imgpoint1.txt"), imgpoints1_new)
-    np.savetxt(os.path.join(path_to_image_dir,args.image_dir,"imgpoint2.txt"), imgpoints2_new)
+        imgpoints_new = np.squeeze(extrinsic_pts)
+        imgpoints1 = imgpoints_new[cam_idx, :, :, :]
+        imgpoints1_new = np.reshape(imgpoints1, [-1, 2])
+        cal_file_helper.save_text_file("imgpoint{}.txt".format(cam_idx+1), imgpoints1_new)
+
 else:
-    objpoints = np.load(os.path.join(path_to_image_dir, args.cal_dir, "objpoints.npy"))
-    extrinsic_pts = np.load(os.path.join(path_to_image_dir, args.cal_dir, "extrinsic_pts.npy"))
+    objpoints = cal_file_helper.load_np_file("objpoints.npy")
+    extrinsic_pts = cal_file_helper.load_np_file("extrinsic_pts.npy")
     intrinsic_pts = []
     rvecs = []
     tvecs = []
     chessboard_detect = []
     for cam_idx in range(num_cam):
-        intrinsic_pts.append(np.load(os.path.join(path_to_image_dir, args.cal_dir, "intrinsic_pts{}.npy".format(cam_idx))))
-        rvecs.append(np.load(os.path.join(path_to_image_dir, args.cal_dir, "rvecs{}.npy".format(cam_idx))))
-        tvecs.append(np.load(os.path.join(path_to_image_dir, args.cal_dir, "tvecs{}.npy".format(cam_idx))))
-        chessboard_detect.append(np.load(os.path.join(path_to_image_dir, args.cal_dir, "chessboard_detect{}.npy".format(cam_idx))))
+        intrinsic_pts.append(cal_file_helper.load_np_file("intrinsic_pts{}.npy".format(cam_idx)))
+        rvecs.append(cal_file_helper.load_np_file("rvecs{}.npy".format(cam_idx)))
+        tvecs.append(cal_file_helper.load_np_file("tvecs{}.npy".format(cam_idx)))
+        chessboard_detect.append(cal_file_helper.load_np_file("chessboard_detect{}.npy".format(cam_idx)))
 
 
 print("")
@@ -210,6 +198,7 @@ if not estimate_distortion:
     i_flags |= cv2.CALIB_FIX_K5
     i_flags |= cv2.CALIB_FIX_K6
     i_flags |= cv2.CALIB_FIX_S1_S2_S3_S4
+
 if force_fx_eq_fy:
     i_flags |= cv2.CALIB_FIX_ASPECT_RATIO
 
@@ -347,25 +336,25 @@ for cam_idx in range(num_cam):
 
 
 # Save results
-np.save(os.path.join(path_to_image_dir, args.cal_dir, "D"), D)
-np.save(os.path.join(path_to_image_dir, args.cal_dir, "K"), K)
-np.save(os.path.join(path_to_image_dir, args.cal_dir, "R"), R)
-np.save(os.path.join(path_to_image_dir, args.cal_dir, "T"), T)
+cal_file_helper.save_np_file("D", D)
+cal_file_helper.save_np_file("K", K)
+cal_file_helper.save_np_file("R", R)
+cal_file_helper.save_np_file("T", T)
 
 for cam_idx in range(num_cam):
-    np.save(os.path.join(path_to_image_dir, args.cal_dir, "rvecs{}".format(cam_idx)), rvecs[cam_idx])
-    np.save(os.path.join(path_to_image_dir, args.cal_dir, "tvecs{}".format(cam_idx)), tvecs[cam_idx])
-    np.save(os.path.join(path_to_image_dir, args.cal_dir, "view_error{}".format(cam_idx)), np.squeeze(view_error[cam_idx]))
+    cal_file_helper.save_np_file("rvecs{}".format(cam_idx), rvecs[cam_idx])
+    cal_file_helper.save_np_file("tvecs{}".format(cam_idx), tvecs[cam_idx])
+    cal_file_helper.save_np_file("view_error{}".format(cam_idx), np.squeeze(view_error[cam_idx]))
     if cam_idx > 0:
-        np.save(os.path.join(path_to_image_dir, args.cal_dir, "stereo_view_error{}".format(cam_idx)), np.squeeze(stereo_view_error[cam_idx-1]))
+        cal_file_helper.save_np_file("stereo_view_error{}".format(cam_idx), np.squeeze(stereo_view_error[cam_idx-1]))
 
 D_np = np.asarray(D)
 K_np = np.asarray(K)
-K_np = np.reshape(K_np,[-1,2])
+K_np = np.reshape(K_np, [-1, 2])
 R_np = np.asarray(R)
 T_np = np.asarray(T)
-np.savetxt(os.path.join(path_to_image_dir,args.image_dir,"D.txt"), np.squeeze(D_np))
-np.savetxt(os.path.join(path_to_image_dir,args.image_dir,"K.txt"), K_np)
-np.savetxt(os.path.join(path_to_image_dir,args.image_dir,"R.txt"), np.reshape(R_np,[-1,2]))
-np.savetxt(os.path.join(path_to_image_dir,args.image_dir,"T.txt"), np.squeeze(T_np))
+cal_file_helper.save_text_file("D.txt", np.squeeze(D_np))
+cal_file_helper.save_text_file("K.txt", K_np)
+cal_file_helper.save_text_file("R.txt", np.reshape(R_np, [-1, 2]))
+cal_file_helper.save_text_file("T.txt", np.squeeze(T_np))
 
