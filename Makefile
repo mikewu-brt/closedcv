@@ -14,7 +14,8 @@ INSTALL_PATH := $(INSTALL_DIR)/usr/local/bin/depthcal
 DIRS_TO_COLLECT := \
 	libs           \
 	misc_scripts   \
-	setup_examples
+	setup_examples \
+	calibration_scripts
 
 ALL_SOURCE_FILES := $(foreach dir,$(DIRS_TO_COLLECT), $(wildcard $(dir)/*.py))
 ALL_TARGET_FILES := $(foreach file,$(ALL_SOURCE_FILES), $(INSTALL_PATH)/$(file))
