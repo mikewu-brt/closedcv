@@ -114,7 +114,6 @@ if process_image_files:
 
             if ret:
                 print("Chessboard Found")
-                print("")
                 chessboard_detect[cam_idx].append(True)
                 if use_2step_findchessboard == True:
                     corners2[cam_idx, 0, :, :, :] = cv2.cornerSubPix(gray, corners, (11, 11), (-1, -1), criteria)
@@ -124,7 +123,7 @@ if process_image_files:
                 if show_images:
                     img2 = cv2.drawChessboardCorners(img, (nx, ny), corners2[cam_idx, 0], True)
                     img2 = cv2.resize(img2, None, fx=display_size, fy=display_size)
-                    cv2.imshow("Image {}".format(cam_idx), img2)
+                    cv2.imshow("{}".format(setupInfo.RigInfo.module_name[cam_idx]), img2)
                     cv2.waitKey(500)
             else:
                 print("Chessboard not found")
@@ -132,8 +131,9 @@ if process_image_files:
                 chessboard_detect[cam_idx].append(False)
                 if show_images:
                     img2 = cv2.resize(img, None, fx=display_size, fy=display_size)
-                    cv2.imshow("Bad Image {}".format(cam_idx), img2)
+                    cv2.imshow("Bad Image {}".format(setupInfo.RigInfo.module_name[cam_idx]), img2)
                     cv2.waitKey(500)
+            print("")
 
         if all_files_read:
             pass
@@ -222,7 +222,7 @@ rvecs = []
 tvecs = []
 for cam_idx in range(num_cam):
     print("")
-    print("Compute intrisics for cam {}".format(cam_idx))
+    print("Compute intrisics for cam {}".format(setupInfo.RigInfo.module_name[cam_idx]))
     print("   Sensor Type: {}".format(setupInfo.SensorInfo.type))
     print("   Sensor Pixel Size (um): {}".format(pixel_size_um))
     print("   Focal Length (mm): {}".format(fl_mm))
@@ -261,7 +261,7 @@ for cam_idx in range(num_cam):
 
     print("")
     print("")
-    print("Camera {} - {}".format(cam_idx, setupInfo.SensorInfo.type))
+    print("Camera {} - {}".format(setupInfo.RigInfo.module_name[cam_idx], setupInfo.SensorInfo.type))
     print("")
     print("Principle point: ({:.2f}, {:.2f}) - Difference from ideal: ({:.2f}, {:.2f})".format(
         K[cam_idx][0, 2], K[cam_idx][1, 2],
@@ -293,14 +293,14 @@ for cam_idx in range(num_cam):
         print("Camera Matrix Camera 0 round 2:")
         print(K[0])
         print("")
-        print("Camera Matrix Camera {} round 2:".format(cam_idx))
+        print("Camera Matrix Camera {} round 2:".format(setupInfo.RigInfo.module_name[cam_idx]))
         print(K[cam_idx])
 
         print("")
         print("Distortion Vector Camera 0 round 2:")
         print(D[0])
         print("")
-        print("Distortion Vector Camera {} round 2:".format(cam_idx))
+        print("Distortion Vector Camera {} round 2:".format(setupInfo.RigInfo.module_name[cam_idx]))
         print(D[cam_idx])
 
         R.append(R1)
@@ -323,7 +323,7 @@ for cam_idx in range(num_cam):
 
         c = np.matmul(-np.linalg.inv(R1), T1)
         print("")
-        print("World coordinate of camera {} (m)".format(cam_idx))
+        print("World coordinate of camera {} (m)".format(setupInfo.RigInfo.module_name[cam_idx]))
         print(c)
     else:
         R.append(np.identity(3))
