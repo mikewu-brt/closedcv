@@ -35,15 +35,10 @@ if unknown:
 
 ####################
 
-# check if env variable PATH_TO_IMAGE_DIR is set, if not use relative path
-path_to_image_dir = os.getenv("PATH_TO_IMAGE_DIR")
-if path_to_image_dir == None:
-    path_to_image_dir = '.'
-
-setupInfo = importlib.import_module("{}.setup".format(args.image_dir))
+image_helper = Image(args.image_dir)
+cal_file_helper = Image(args.cal_dir)
+setupInfo = image_helper.setup_info()
 img_size = (setupInfo.SensorInfo.width, setupInfo.SensorInfo.height)
-image_helper = Image(setupInfo, args.image_dir)
-cal_file_helper = Image(None, args.cal_dir)
 
 # Optical parameters
 fl_mm = setupInfo.LensInfo.fl_mm
@@ -68,7 +63,7 @@ force_fx_eq_fy = True
 estimate_distortion = True
 use_2step_findchessboard = False
 
-display_size = 1/2
+display_size = image_helper.display_size(1024)
 
 ######################
 

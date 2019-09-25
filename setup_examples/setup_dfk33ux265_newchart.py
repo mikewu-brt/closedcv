@@ -12,6 +12,7 @@
  *
 """
 import numpy as np
+import cv2
 
 
 class SensorInfo:
@@ -19,7 +20,7 @@ class SensorInfo:
     pixel_size_um = 3.45
     width = 2048
     height = 1536
-    num_adc_bits = 10
+    bits_per_pixel = 10
 
 
 class LensInfo:
@@ -32,6 +33,7 @@ class RigInfo:
     input_image_filename = np.array(["cap_rit_{}.rggb", "cap_lft_{}.rggb"])
     module_name = ["A1", "A2"]
     left_justified = True
+    packed = False
     cv2_color_conversion = cv2.COLOR_BayerBG2BGR
 
 

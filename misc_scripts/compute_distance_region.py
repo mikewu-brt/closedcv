@@ -40,7 +40,6 @@ args, unknown = parser.parse_known_args()
 if unknown:
     print("Unknown options: {}".format(unknown))
 
-scale = 0.5
 use_saved_results = False
 
 search_y_min = -6
@@ -50,8 +49,9 @@ max_disparity = 800
 ####################a
 
 stereo = Stereo(args.cal_dir)
-setup_info = importlib.import_module("{}.setup".format(args.image_dir))
-image_helper = Image(setup_info, args.image_dir)
+image_helper = Image(args.image_dir)
+setup_info = image_helper.setup_info()
+scale = image_helper.display_size(1024)
 
 num_cam = image_helper.num_cam()
 all_files_read = False

@@ -27,14 +27,17 @@ class Stereo:
         :param image_dir: Image directory
         :param img_shape: Optional image shape.  If not provided, an image file will be read to determine the shape.
         """
-        self.__image_dir = image_dir
+        path_to_image_dir = os.getenv("PATH_TO_IMAGE_DIR")
+        if path_to_image_dir is None:
+            path_to_image_dir = '.'
+        self.__image_dir = os.path.join(path_to_image_dir, image_dir)
 
         self.__setup = importlib.import_module("{}.setup".format(image_dir))
 
-        self.__K = np.load(os.path.join(image_dir, "K.npy"))
-        self.__R = np.load(os.path.join(image_dir, "R.npy"))
-        self.__T = np.load(os.path.join(image_dir, "T.npy"))
-        self.__D = np.load(os.path.join(image_dir, "D.npy"))
+        self.__K = np.load(os.path.join(self.__image_dir, "K.npy"))
+        self.__R = np.load(os.path.join(self.__image_dir, "R.npy"))
+        self.__T = np.load(os.path.join(self.__image_dir, "T.npy"))
+        self.__D = np.load(os.path.join(self.__image_dir, "D.npy"))
 
         if img_shape is None:
             # Read an image file to determine the size

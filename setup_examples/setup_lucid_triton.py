@@ -32,7 +32,7 @@ class SensorInfo:
     pixel_size_um = 4.5
     width = 3208
     height = 2200
-    num_adc_bits = 12
+    bits_per_pixel = 12
 
 
 class LensInfo:
@@ -45,6 +45,7 @@ class RigInfo:
     input_image_filename = np.array(["Image_sn193800001_f{}.raw", "Image_sn193800001_f{}.raw"])
     module_name = ["A1", "A2"]
     left_justified = False
+    packed = False
     cv2_color_conversion = cv2.COLOR_BayerRG2BGR
 
 

@@ -37,17 +37,11 @@ if unknown:
     print("Unknown options: {}".format(unknown))
 
 ####################
-display_size = 1/2
 
 
-# check if env variable PATH_TO_IMAGE_DIR is set, if not use relative path
-path_to_image_dir = os.getenv("PATH_TO_IMAGE_DIR")
-if path_to_image_dir is None:
-    path_to_image_dir = '.'
-
-setupInfo = importlib.import_module("{}.setup".format(args.image_dir))
-image_dir = args.image_dir
-image_helper = Image(setupInfo, image_dir)
+image_helper = Image(args.image_dir)
+setupInfo = image_helper.setup_info()
+display_size = image_helper.display_size(1024)
 
 # Optical parameters
 fl_mm = setupInfo.LensInfo.fl_mm
@@ -76,15 +70,15 @@ tvecs = []
 chessboard_detect = []
 view_error = []
 for cam_idx in range(num_cam):
-    intrinsic_pts.append(np.load(os.path.join(path_to_image_dir, image_dir, "intrinsic_pts{}.npy".format(cam_idx))))
-    rvecs.append(np.load(os.path.join(path_to_image_dir, image_dir, "rvecs{}.npy".format(cam_idx))))
-    tvecs.append(np.load(os.path.join(path_to_image_dir, image_dir, "tvecs{}.npy".format(cam_idx))))
-    chessboard_detect.append(np.load(os.path.join(path_to_image_dir, image_dir, "chessboard_detect{}.npy".format(cam_idx))))
-    view_error.append(np.load(os.path.join(path_to_image_dir, image_dir, "view_error{}.npy".format(cam_idx))))
+    intrinsic_pts.append(image_helper.load_np_file("intrinsic_pts{}.npy".format(cam_idx)))
+    rvecs.append(image_helper.load_np_file("rvecs{}.npy".format(cam_idx)))
+    tvecs.append(image_helper.load_np_file("tvecs{}.npy".format(cam_idx)))
+    chessboard_detect.append(image_helper.load_np_file("chessboard_detect{}.npy".format(cam_idx)))
+    view_error.append(image_helper.load_np_file("view_error{}.npy".format(cam_idx)))
 
 imgshape = (setupInfo.SensorInfo.width, setupInfo.SensorInfo.width)
-K = np.load(os.path.join(path_to_image_dir, image_dir, "K.npy"))
-D = np.load(os.path.join(path_to_image_dir, image_dir, "D.npy"))
+K = image_helper.load_np_file("K.npy")
+D = image_helper.load_np_file("D.npy")
 
 # Misc control
 
@@ -169,7 +163,7 @@ for cam_idx in range(num_cam):
         imgpoints_y = intrinsic_pts[cam_idx][i][:, 0, 1]
         image_index = np.where(chessboard_detect[cam_idx])
 
-        img2, gray = image_helper.read_image_file(os.path.join(path_to_image_dir, image_dir), cam_idx, image_index[0][i])
+        img2, gray = image_helper.read_image_file(cam_idx, image_index[0][i])
         img2 = cv2.resize(img2, None, fx=display_size, fy=display_size)
 
         # ##########undistort and check #############

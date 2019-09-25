@@ -36,8 +36,8 @@ if unknown:
 
 ####################
 
-setupInfo = importlib.import_module("{}.setup".format(args.image_dir))
-image_helper = Image(setupInfo, args.image_dir)
+image_helper = Image(args.image_dir)
+setupInfo = image_helper.setup_info()
 
 # Optical parameters
 fl_mm = setupInfo.LensInfo.fl_mm
@@ -60,7 +60,7 @@ process_image_files = True
 force_fx_eq_fy = False
 estimate_distortion = True
 
-display_size = 1/2
+display_size = image_helper.display_size(1024)
 
 ######################
 
