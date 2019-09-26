@@ -74,7 +74,7 @@ plt.figure(1)
 
 # Prepare object points, like (0,0,0), (1,0,0), (2,0,0) ....,(6,5,0)
 objp = np.zeros((nx*ny, 3), np.float32)
-objp[:,:2] = np.mgrid[0:nx,0:ny].T.reshape(-1,2) * (checker_size_mm * 1.0e-3)
+objp[:, :2] = np.mgrid[0:nx, 0:ny].T.reshape(-1, 2) * (checker_size_mm * 1.0e-3)
 
 # Arrays to store object points and image points from all the images.
 objpoints = []                  # 3D points in World space (relative)
@@ -92,7 +92,7 @@ num_files_missing = 0
 if process_image_files:
     while not all_files_read:
         chessboard_found = True
-        # Load imageos
+        # Load images
         for cam_idx in range(num_cam):
             img, gray = image_helper.read_image_file(cam_idx, orientation)
             if img is None:
@@ -100,22 +100,21 @@ if process_image_files:
                 break
 
             print("Searching")
-            if use_2step_findchessboard == True:
-                if use_rgb_image == False:
-                    ret, corners = cv2.findChessboardCorners(gray, (nx, ny), None)
-                else:
+            if use_2step_findchessboard:
+                if use_rgb_image:
                     ret, corners = cv2.findChessboardCorners(img, (nx, ny), None)
-            else:
-                if use_rgb_image == False:
-                    ret, corners = cv2.findChessboardCornersSB(gray, (nx, ny), None)
                 else:
+                    ret, corners = cv2.findChessboardCorners(gray, (nx, ny), None)
+            else:
+                if use_rgb_image:
                     ret, corners = cv2.findChessboardCornersSB(img, (nx, ny), None)
-
+                else:
+                    ret, corners = cv2.findChessboardCornersSB(gray, (nx, ny), None)
 
             if ret:
                 print("Chessboard Found")
                 chessboard_detect[cam_idx].append(True)
-                if use_2step_findchessboard == True:
+                if use_2step_findchessboard:
                     corners2[cam_idx, 0, :, :, :] = cv2.cornerSubPix(gray, corners, (11, 11), (-1, -1), criteria)
                 else:
                     corners2[cam_idx, 0, :, :, :] = corners
@@ -181,8 +180,8 @@ R_guess = np.identity(3)
 i_flags = cv2.CALIB_USE_INTRINSIC_GUESS
 i_flags |= cv2.CALIB_ZERO_TANGENT_DIST
 i_flags |= cv2.CALIB_FIX_K3
-#i_flags |= cv2.CALIB_RATIONAL_MODEL
-#i_flags |= cv2.CALIB_THIN_PRISM_MODEL
+# i_flags |= cv2.CALIB_RATIONAL_MODEL
+# i_flags |= cv2.CALIB_THIN_PRISM_MODEL
 
 if not estimate_distortion:
     i_flags |= cv2.CALIB_ZERO_TANGENT_DIST
@@ -269,7 +268,7 @@ for cam_idx in range(num_cam):
         setupInfo.SensorInfo.height / 2 - K[cam_idx][1, 2]))
     print("")
     print("Focal length (mm): ({:.2f}, {:.2f}) - Expected {}mm".format(
-        K[cam_idx][0,0] * pixel_size_um * 1.0e-3, K[cam_idx][1,1] * pixel_size_um * 1.0e-3, fl_mm))
+        K[cam_idx][0, 0] * pixel_size_um * 1.0e-3, K[cam_idx][1, 1] * pixel_size_um * 1.0e-3, fl_mm))
 
     print("")
     print("Camera Matrix round 1:")
@@ -282,10 +281,8 @@ for cam_idx in range(num_cam):
     print("")
     print("Reprojection Error {}".format(reproj_error))
 
-
-
     if cam_idx != 0:
-        T_guess = np.matmul(R_guess, -cam_position_m[cam_idx].reshape(3,1))
+        T_guess = np.matmul(R_guess, -cam_position_m[cam_idx].reshape(3, 1))
         ret, K1, D1, K2, D2, R1, T1, E, F, viewErr = cv2.stereoCalibrateExtended(objpoints, imgpts_ref, imgpts,
                                   K[0], D[0], K[cam_idx], D[cam_idx], img_size, R_guess.copy(), T_guess, flags=e_flags)
 
@@ -352,4 +349,3 @@ cal_file_helper.save_text_file("D.txt", np.squeeze(D_np))
 cal_file_helper.save_text_file("K.txt", K_np)
 cal_file_helper.save_text_file("R.txt", np.reshape(R_np, [-1, 2]))
 cal_file_helper.save_text_file("T.txt", np.squeeze(T_np))
-
