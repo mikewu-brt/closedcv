@@ -78,7 +78,6 @@ objp[:, :2] = np.mgrid[0:nx, 0:ny].T.reshape(-1, 2) * (checker_size_mm * 1.0e-3)
 
 # Arrays to store object points and image points from all the images.
 objpoints = []                  # 3D points in World space (relative)
-extrinsic_pts = np.empty((num_cam, 1, nx * ny, 1, 2))     # Image points
 intrinsic_pts = []
 chessboard_detect = []
 for cam_idx in range(num_cam):
@@ -136,29 +135,16 @@ if process_image_files:
 
         if all_files_read:
             pass
-        elif chessboard_found:
-            # Add points to arrays
-            if len(objpoints) == 0:
-                extrinsic_pts = corners2.copy()
-            else:
-                extrinsic_pts = np.concatenate((extrinsic_pts, corners2.copy()), axis=1)
-            objpoints.append(objp)
+
         orientation += 1
 
     cal_file_helper.save_np_file("objpoints", objpoints)
-    cal_file_helper.save_np_file("extrinsic_pts", extrinsic_pts)
     for cam_idx in range(num_cam):
         cal_file_helper.save_np_file("intrinsic_pts{}".format(cam_idx), intrinsic_pts[cam_idx])
         cal_file_helper.save_np_file("chessboard_detect{}".format(cam_idx), chessboard_detect[cam_idx])
 
-        imgpoints_new = np.squeeze(extrinsic_pts)
-        imgpoints1 = imgpoints_new[cam_idx, :, :, :]
-        imgpoints1_new = np.reshape(imgpoints1, [-1, 2])
-        cal_file_helper.save_text_file("imgpoint{}.txt".format(cam_idx+1), imgpoints1_new)
-
 else:
     objpoints = cal_file_helper.load_np_file("objpoints.npy")
-    extrinsic_pts = cal_file_helper.load_np_file("extrinsic_pts.npy")
     intrinsic_pts = []
     rvecs = []
     tvecs = []
@@ -221,7 +207,7 @@ rvecs = []
 tvecs = []
 for cam_idx in range(num_cam):
     print("")
-    print("Compute intrisics for cam {}".format(setupInfo.RigInfo.module_name[cam_idx]))
+    print("Compute intrinsics for cam {}".format(setupInfo.RigInfo.module_name[cam_idx]))
     print("   Sensor Type: {}".format(setupInfo.SensorInfo.type))
     print("   Sensor Pixel Size (um): {}".format(pixel_size_um))
     print("   Focal Length (mm): {}".format(fl_mm))
@@ -241,27 +227,11 @@ for cam_idx in range(num_cam):
     rvecs.append(rvecs1)
     tvecs.append(tvecs1)
 
-    # Extrinsic data - pair up  ref cam with all the other cams independently
-    imgpts = []
-    imgpts_ref = []
-    objpoints = []                  # 3D points in World space (relative)
-    count_ref = 0
-    count_aux = 0
-    if cam_idx != 0:
-        for i in range(len(chessboard_detect[0])):
-            if chessboard_detect[0][i] and chessboard_detect[cam_idx][i]:
-                imgpts_ref.append(intrinsic_pts[0][count_ref])
-                imgpts.append(intrinsic_pts[cam_idx][count_aux])
-                objpoints.append(objp)
-            if chessboard_detect[0][i]:
-                count_ref += 1
-            if chessboard_detect[cam_idx][i]:
-                count_aux += 1
-
     print("")
     print("")
     print("Camera {} - {}".format(setupInfo.RigInfo.module_name[cam_idx], setupInfo.SensorInfo.type))
     print("")
+    print("Num intrinsic poses: {}".format(len(obj_pts)))
     print("Principle point: ({:.2f}, {:.2f}) - Difference from ideal: ({:.2f}, {:.2f})".format(
         K[cam_idx][0, 2], K[cam_idx][1, 2],
         setupInfo.SensorInfo.width / 2 - K[cam_idx][0, 2],
@@ -282,19 +252,38 @@ for cam_idx in range(num_cam):
     print("Reprojection Error {}".format(reproj_error))
 
     if cam_idx != 0:
+        # Extrinsic data - pair up  ref cam with all the other cams independently
+        imgpts = []
+        imgpts_ref = []
+        objpoints = []  # 3D points in World space (relative)
+        count_ref = 0
+        count_aux = 0
+        if cam_idx != 0:
+            for i in range(len(chessboard_detect[0])):
+                if chessboard_detect[0][i] and chessboard_detect[cam_idx][i]:
+                    imgpts_ref.append(intrinsic_pts[0][count_ref])
+                    imgpts.append(intrinsic_pts[cam_idx][count_aux])
+                    objpoints.append(objp)
+                if chessboard_detect[0][i]:
+                    count_ref += 1
+                if chessboard_detect[cam_idx][i]:
+                    count_aux += 1
+
         T_guess = np.matmul(R_guess, -cam_position_m[cam_idx].reshape(3, 1))
         ret, K1, D1, K2, D2, R1, T1, E, F, viewErr = cv2.stereoCalibrateExtended(objpoints, imgpts_ref, imgpts,
                                   K[0], D[0], K[cam_idx], D[cam_idx], img_size, R_guess.copy(), T_guess, flags=e_flags)
 
         print("")
-        print("Camera Matrix Camera 0 round 2:")
+        print("Num extrinsic poses: {}".format(len(objpoints)))
+        print("")
+        print("Camera Matrix Camera {} round 2:".format(setupInfo.RigInfo.module_name[0]))
         print(K[0])
         print("")
         print("Camera Matrix Camera {} round 2:".format(setupInfo.RigInfo.module_name[cam_idx]))
         print(K[cam_idx])
 
         print("")
-        print("Distortion Vector Camera 0 round 2:")
+        print("Distortion Vector Camera {} round 2:".format(setupInfo.RigInfo.module_name[0]))
         print(D[0])
         print("")
         print("Distortion Vector Camera {} round 2:".format(setupInfo.RigInfo.module_name[cam_idx]))
@@ -342,10 +331,10 @@ for cam_idx in range(num_cam):
 
 D_np = np.asarray(D)
 K_np = np.asarray(K)
-K_np = np.reshape(K_np, [-1, 2])
+K_np = np.reshape(K_np, [-1, num_cam])
 R_np = np.asarray(R)
 T_np = np.asarray(T)
 cal_file_helper.save_text_file("D.txt", np.squeeze(D_np))
 cal_file_helper.save_text_file("K.txt", K_np)
-cal_file_helper.save_text_file("R.txt", np.reshape(R_np, [-1, 2]))
+cal_file_helper.save_text_file("R.txt", np.reshape(R_np, [-1, num_cam]))
 cal_file_helper.save_text_file("T.txt", np.squeeze(T_np))

@@ -58,7 +58,7 @@ class Image:
             scale /= 2.0
         return scale
 
-    def read_image_file(self, camera_idx, capture_idx, scale_to_8bit=True):
+    def read_image_file(self, camera_idx, capture_idx, scale_to_8bit=True, raw_output=False):
         """
         Process raw image files into "Numpy" arrays.
 
@@ -105,8 +105,12 @@ class Image:
             if scale_to_8bit:
                 raw = (raw >> 8).astype(np.uint8)
 
-            img = cv2.cvtColor(raw, self.__setup.RigInfo.cv2_color_conversion)
-            gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+            if raw_output:
+                img = raw
+                gray = None
+            else:
+                img = cv2.cvtColor(raw, self.__setup.RigInfo.cv2_color_conversion)
+                gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
 
         return img, gray
 

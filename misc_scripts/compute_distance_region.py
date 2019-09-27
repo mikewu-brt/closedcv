@@ -108,6 +108,9 @@ if not use_saved_results:
                 while True:
                     key = cv2.waitKey(200)
                     if key == 27:
+                        for cleanup_idx in range(cam_idx):
+                            ref_pts[cleanup_idx].pop()
+                            src_pts[cleanup_idx].pop()
                         all_files_read = True
                         break
                     elif key == ord('n'):
@@ -162,10 +165,14 @@ if not use_saved_results:
                             print("")
 
                             # Draw line on rectified view
-                            ym = int((ys + ye) / 2.0)
-                            updated_overlay = cv2.line(rect_overlay.copy(), (0, ym), (rect_overlay.shape[1], ym), (0, 255, 0), 1)
-                            updated_overlay = cv2.line(updated_overlay, (0, ys), (rect_overlay.shape[1], ys), (255, 0, 0), 1)
-                            updated_overlay = cv2.line(updated_overlay, (0, ye), (rect_overlay.shape[1], ye), (0, 0, 255), 1)
+                            min_ye = min_ys + int(1.0 / scale * roi[3])
+                            min_ym = int((min_ys + min_ye) / 2.0)
+                            min_xe = min_xs + int(1.0 / scale * roi[2])
+                            updated_overlay = cv2.line(rect_overlay.copy(), (0, min_ym), (rect_overlay.shape[1], min_ym), (0, 255, 0), 1)
+                            updated_overlay = cv2.line(updated_overlay, (0, min_ys), (rect_overlay.shape[1], min_ys), (255, 0, 0), 1)
+                            updated_overlay = cv2.line(updated_overlay, (0, min_ye), (rect_overlay.shape[1], min_ye), (0, 0, 255), 1)
+                            updated_overlay = cv2.line(updated_overlay, (min_xs, 0), (min_xs, rect_overlay.shape[0]), (0, 0, 255), 1)
+                            updated_overlay = cv2.line(updated_overlay, (min_xe, 0), (min_xe, rect_overlay.shape[0]), (0, 0, 255), 1)
                             img = cv2.resize(updated_overlay, dsize=None, fx=scale, fy=scale)
                             cv2.imshow("Rect Overlay Cam {} - Cam {}".format(setup_info.RigInfo.module_name[0],
                                                                  setup_info.RigInfo.module_name[cam_idx]), img)
@@ -176,9 +183,7 @@ if not use_saved_results:
 
     for i in range(len(ref_pts)):
         if i == 0:
-            ref_pts[0].pop()
             ref = np.expand_dims(np.array(ref_pts[i]), axis=0)
-            src_pts[0].pop()
             src = np.expand_dims(np.array(src_pts[i]), axis=0)
         else:
             ref = np.concatenate((ref, np.expand_dims(np.array(ref_pts[i]), axis=0)), axis=0)
@@ -213,8 +218,9 @@ for cam_idx in range(1, num_cam):
     # Plot results
     # Correct for angles in the ground truth measurements
     delta = np.linalg.norm(ref_pts[cam_idx] - P2[:2, 2], axis=1)
-    theta = np.arctan(delta / P2[0,0])
-    new_gt = np.cos(theta) * gt[0:len(theta)]
+    theta = np.arctan(delta / P2[0, 0])
+    alpha = np.arctan(delta / P2[1, 1])
+    new_gt = np.cos(theta) * np.cos(alpha) * gt[0:len(theta)]
 
     # Sort the Ground truth (for display purposes)
     i = np.argsort(new_gt)
