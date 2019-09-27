@@ -24,10 +24,6 @@ import matplotlib.pyplot as plt
 plt.figure(1).clear()
 orientation = 0
 
-ref_pts = []
-src_pts = []
-
-
 ####################
 # Input Parameters
 ####################
@@ -51,10 +47,16 @@ max_disparity = 800
 stereo = Stereo(args.cal_dir)
 image_helper = Image(args.image_dir)
 setup_info = image_helper.setup_info()
-scale = image_helper.display_size(1024)
+scale = image_helper.display_size(2000)
 
 num_cam = image_helper.num_cam()
 all_files_read = False
+
+ref_pts = []
+src_pts = []
+for cam_idx in range(num_cam):
+    ref_pts.append([])
+    src_pts.append([])
 
 if not use_saved_results:
     while not all_files_read:
@@ -67,6 +69,8 @@ if not use_saved_results:
             if cam_idx == 0:
                 # save reference image
                 img_ref = img.copy()
+                ref_pts[0].append((0, 0))
+                src_pts[0].append((0, 0))
             else:
                 # Rectifiy views
                 img_src = img.copy()
@@ -75,12 +79,14 @@ if not use_saved_results:
                 # Plot rectified views
                 rect_overlay = cv2.addWeighted(rect_ref, 0.5, rect_src, 0.5, 0.0)
                 img = cv2.resize(rect_overlay, dsize=None, fx=scale, fy=scale)
-                cv2.imshow("Rect Overlay", img)
+                cv2.imshow("Rect Overlay Cam {} - Cam {}".format(setup_info.RigInfo.module_name[0],
+                                                                 setup_info.RigInfo.module_name[cam_idx]), img)
 
                 # Disparity / Distance chart for this view
                 plt.figure(cam_idx).clear()
                 d = np.arange(5, 400)
-                z = -P2[0, 3] / d
+                # Take abs for display purposes
+                z = np.absolute(-P2[0, 3] / d)
                 plt.plot(d, z)
                 plt.title("Disparity distance")
                 plt.xlabel("Disparity (pixels)")
@@ -89,7 +95,7 @@ if not use_saved_results:
 
                 # Choose region
                 print("")
-                print("Orientation {}".format(orientation))
+                print("Orientation {}, Cam {}".format(orientation, setup_info.RigInfo.module_name[cam_idx]))
                 print("Press \'s\' to select ROI from reference image, ESC to exit, \'n\' to advance to next capture")
                 show_w = int(rect_ref.shape[1] * scale)
                 show_h = int(rect_ref.shape[0] * scale)
@@ -105,7 +111,7 @@ if not use_saved_results:
                         all_files_read = True
                         break
                     elif key == ord('n'):
-                        if len(ref_pts) > orientation:
+                        if len(ref_pts[cam_idx]) > orientation:
                             print("Advancing to next capture")
                             break
                         else:
@@ -128,7 +134,7 @@ if not use_saved_results:
                                 srcys = max(0, ys + y_search)
                                 srcye = min(srcys + int(1.0 / scale * roi[3]), rect_src.shape[0])
 
-                                while (srcxs < xs) and (srcxe < rect_src.shape[1]):
+                                while (srcxs <= (xs + max_disparity)) and (srcxe < rect_src.shape[1]):
                                     abs_diff = np.sum(np.abs(np.subtract(rect_ref[ys:ye, xs:xe], rect_src[srcys:srcye, srcxs:srcxe], dtype=np.float)))
                                     if abs_diff < min_sum:
                                         min_sum = abs_diff
@@ -138,16 +144,17 @@ if not use_saved_results:
                                     srcxs += 1
                                     srcxe += 1
 
-                            if len(ref_pts) <= orientation:
-                                ref_pts.append((xs, ys))
-                                src_pts.append((min_xs, min_ys))
+                            if len(ref_pts[cam_idx]) <= orientation:
+                                ref_pts[cam_idx].append((xs, ys))
+                                src_pts[cam_idx].append((min_xs, min_ys))
                             else:
-                                ref_pts[orientation] = (xs, ys)
-                                src_pts[orientation] = (min_xs, min_ys)
+                                ref_pts[cam_idx][orientation] = (xs, ys)
+                                src_pts[cam_idx][orientation] = (min_xs, min_ys)
 
                             pts = []
-                            pts.append(np.array(ref_pts[orientation]).reshape(1, 2))
-                            pts.append(np.array(src_pts[orientation]).reshape(1, 2))
+                            pts.append(np.array(ref_pts[cam_idx][orientation]).reshape(1, 2))
+                            pts.append(np.array(src_pts[cam_idx][orientation]).reshape(1, 2))
+                            print(P2)
                             dis, dip = stereo.compute_distance_disparity(pts, T=P2[:, 3])
                             print("Reference ROI: ({}, {}, {}, {})".format(xs, ys, xe-xs, ye-ys))
                             print("Source ROI top: ({}, {})".format(min_xs, min_ys))
@@ -160,12 +167,24 @@ if not use_saved_results:
                             updated_overlay = cv2.line(updated_overlay, (0, ys), (rect_overlay.shape[1], ys), (255, 0, 0), 1)
                             updated_overlay = cv2.line(updated_overlay, (0, ye), (rect_overlay.shape[1], ye), (0, 0, 255), 1)
                             img = cv2.resize(updated_overlay, dsize=None, fx=scale, fy=scale)
-                            cv2.imshow("Rect Overlay", img)
+                            cv2.imshow("Rect Overlay Cam {} - Cam {}".format(setup_info.RigInfo.module_name[0],
+                                                                 setup_info.RigInfo.module_name[cam_idx]), img)
+                    if all_files_read:
+                        break
 
         orientation += 1
 
-    ref_pts = np.array(ref_pts).reshape(-1, 2)
-    src_pts = np.array(src_pts).reshape(-1, 2)
+    for i in range(len(ref_pts)):
+        if i == 0:
+            ref_pts[0].pop()
+            ref = np.expand_dims(np.array(ref_pts[i]), axis=0)
+            src_pts[0].pop()
+            src = np.expand_dims(np.array(src_pts[i]), axis=0)
+        else:
+            ref = np.concatenate((ref, np.expand_dims(np.array(ref_pts[i]), axis=0)), axis=0)
+            src = np.concatenate((src, np.expand_dims(np.array(src_pts[i]), axis=0)), axis=0)
+    ref_pts = ref
+    src_pts = src
     i = input("Do you wish to save the results (Y/n): ")
     if i == 'Y':
         print("Saving results")
@@ -179,68 +198,76 @@ else:
     # Load results from files
     ref_pts = image_helper.load_np_file("ref_pts.npy")
     src_pts = image_helper.load_np_file("src_pts.npy")
-    R1, R2, P1, P2, Q, roi1, roi2 = stereo.rectification_matrix(1)
 
-# Compute results
-pts = []
-pts.append(np.array(ref_pts).reshape(-1, 2))
-pts.append(np.array(src_pts).reshape(-1, 2))
-distance, disparity = stereo.compute_distance_disparity(pts, T=P2[:, 3])
-
-# Plot results
-# Correct for angles in the ground truth measurements
 gt = image_helper.load_np_file("ground_truth.npy")
-delta = np.linalg.norm(ref_pts - P2[:2, 2], axis=1)
-theta = np.arctan(delta / P2[0,0])
-new_gt = np.cos(theta) * gt[0:len(theta)]
+for cam_idx in range(1, num_cam):
+    R1, R2, P1, P2, Q, roi1, roi2 = stereo.rectification_matrix(cam_idx)
+    # Compute results
+    pts = []
+    pts.append(ref_pts[cam_idx])
+    pts.append(src_pts[cam_idx])
+    distance, disparity = stereo.compute_distance_disparity(pts, T=P2[:, 3])
+    disparity = np.squeeze(disparity)
+    distance = np.squeeze(distance)
 
-# Sort the Ground truth (for display purposes)
-i = np.argsort(new_gt)
+    # Plot results
+    # Correct for angles in the ground truth measurements
+    delta = np.linalg.norm(ref_pts[cam_idx] - P2[:2, 2], axis=1)
+    theta = np.arctan(delta / P2[0,0])
+    new_gt = np.cos(theta) * gt[0:len(theta)]
 
-plt.figure(10).clear()
-plt.scatter(-disparity[0][i], distance[0][i])
-plt.scatter(-disparity[0][i], new_gt[i])
-plt.grid()
-plt.xlabel("Disparity (pixels)")
-plt.ylabel("Distance (m)")
-plt.title("Disparity / Distance - {}".format(args.cal_dir))
-plt.legend(("Computed Distance", "Ground Truth"))
+    # Sort the Ground truth (for display purposes)
+    i = np.argsort(new_gt)
 
-
-dx = P2[0, 3] / new_gt
-g1 = P2[0, 3] / (dx + 1)
-g2 = P2[0, 3] / (dx - 1)
-g3 = P2[0, 3] / (dx + 2)
-g4 = P2[0, 3] / (dx - 2)
-
-err = distance[0] - new_gt
-plt.figure(11).clear()
-plt.plot(new_gt[i], err[i])
-plt.plot(new_gt[i], (g3-new_gt)[i])
-plt.plot(new_gt[i], (g1-new_gt)[i])
-plt.plot(new_gt[i], (g2-new_gt)[i])
-plt.plot(new_gt[i], (g4-new_gt)[i])
-plt.grid()
-plt.xlabel("Distance (m)")
-plt.ylabel("Error (m)")
-plt.title("Distance Error - {}".format(args.cal_dir))
-plt.legend(("Error", "+2 pixel error", "+1 pixel error", "-1 pixel error", "-2 pixel error"))
+    plt.figure(0 + 10 * cam_idx).clear()
+    plt.scatter(-disparity[i], distance[i])
+    plt.scatter(-disparity[i], new_gt[i])
+    plt.grid()
+    plt.xlabel("Disparity (pixels)")
+    plt.ylabel("Distance (m)")
+    plt.title("Disparity / Distance Cam {} {} - {}".format(setup_info.RigInfo.module_name[0],
+                                                           setup_info.RigInfo.module_name[cam_idx], args.cal_dir))
+    plt.legend(("Computed Distance", "Ground Truth"))
 
 
-pixel_err = disparity[0] - dx
-plt.figure(12).clear()
-plt.plot(new_gt[i], pixel_err[i])
-plt.grid()
-plt.xlabel("Distance (m)")
-plt.ylabel("Error (pixels)")
-plt.title("Pixel error vs distance - {}".format(args.cal_dir))
+    dx = P2[0, 3] / new_gt
+    g1 = P2[0, 3] / (dx + 1)
+    g2 = P2[0, 3] / (dx - 1)
+    g3 = P2[0, 3] / (dx + 2)
+    g4 = P2[0, 3] / (dx - 2)
 
-plt.figure(13).clear()
-diff = src_pts - ref_pts
-plt.scatter(-diff[:, 0], diff[:, 1])
-plt.grid()
-plt.xlabel("Disparity X (pixels)")
-plt.ylabel("Disparity Y (pixels)")
-plt.title("Y Disparity Error - Search range ({}, {}) - {}".format(search_y_min, search_y_max, args.cal_dir))
+    err = distance - new_gt
+    plt.figure(1 + 10 * cam_idx).clear()
+    plt.plot(new_gt[i], err[i])
+    plt.plot(new_gt[i], (g3-new_gt)[i])
+    plt.plot(new_gt[i], (g1-new_gt)[i])
+    plt.plot(new_gt[i], (g2-new_gt)[i])
+    plt.plot(new_gt[i], (g4-new_gt)[i])
+    plt.grid()
+    plt.xlabel("Distance (m)")
+    plt.ylabel("Error (m)")
+    plt.title("Distance Error Cam {} {} - {}".format(setup_info.RigInfo.module_name[0],
+                                                     setup_info.RigInfo.module_name[cam_idx], args.cal_dir))
+    plt.legend(("Error", "+2 pixel error", "+1 pixel error", "-1 pixel error", "-2 pixel error"))
+
+
+    pixel_err = disparity - dx
+    plt.figure(2 + 10 * cam_idx).clear()
+    plt.plot(new_gt[i], pixel_err[i])
+    plt.grid()
+    plt.xlabel("Distance (m)")
+    plt.ylabel("Error (pixels)")
+    plt.title("Pixel error vs distance Cam {} {} - {}".format(setup_info.RigInfo.module_name[0],
+                                                              setup_info.RigInfo.module_name[cam_idx], args.cal_dir))
+
+    plt.figure(3 + 10 * cam_idx).clear()
+    diff = src_pts[cam_idx] - ref_pts[cam_idx]
+    plt.scatter(-diff[:, 0], diff[:, 1])
+    plt.grid()
+    plt.xlabel("Disparity X (pixels)")
+    plt.ylabel("Disparity Y (pixels)")
+    plt.title("Y Disparity Error Cam {} {} - Search range ({}, {}) - {}".format(setup_info.RigInfo.module_name[0],
+                                                                                setup_info.RigInfo.module_name[cam_idx],
+                                                                                search_y_min, search_y_max, args.cal_dir))
 
 cv2.destroyAllWindows()
