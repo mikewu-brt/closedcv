@@ -16,6 +16,7 @@ import os
 import importlib
 import argparse
 from libs.Image import *
+from libs.CalibrationInfo import *
 import matplotlib as matplot
 matplot.use('TkAgg')
 import matplotlib.pyplot as plt
@@ -26,8 +27,8 @@ import matplotlib.pyplot as plt
 ####################
 
 parser = argparse.ArgumentParser(description="Stereo Calibrate 2")
-parser.add_argument('--image_dir', default='Calibration_Aug23')
-parser.add_argument('--cal_dir', default='Calibration_Aug23')
+parser.add_argument('--image_dir', default='Oct2_cal')
+parser.add_argument('--cal_dir', default='Oct2_cal')
 
 args, unknown = parser.parse_known_args()
 if unknown:
@@ -339,10 +340,8 @@ for cam_idx in range(num_cam):
 
 
 # Save results
-cal_file_helper.save_np_file("D", D)
-cal_file_helper.save_np_file("K", K)
-cal_file_helper.save_np_file("R", R)
-cal_file_helper.save_np_file("T", T)
+cal_info = CalibrationInfo(args.cal_dir, K=np.array(K), D=np.array(D), R=np.array(R), T=np.array(T))
+cal_info.write_json("calibration.json")
 
 for cam_idx in range(num_cam):
     cal_file_helper.save_np_file("rvecs{}".format(cam_idx), rvecs[cam_idx])

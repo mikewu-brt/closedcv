@@ -25,10 +25,11 @@ class SensorInfo:
 
 class LensInfo:
     fl_mm = 12.0
+    focus_distance_mm = 5000.0
 
 
 class RigInfo:
-    module_name = "DKF33UX265"
+    camera_module_name = "DKF33UX265"
     cam_position_m = np.array([[0, 0, 0], [1.116, 0, 0]])
     input_image_filename = np.array(["cap_rit_{}.rggb", "cap_lft_{}.rggb"])
     module_name = ["A1", "A2"]

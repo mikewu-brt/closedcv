@@ -16,6 +16,7 @@ import os
 import importlib
 import argparse
 from libs.Image import *
+from libs.CalibrationInfo import *
 import matplotlib as matplot
 matplot.use('TkAgg')
 import matplotlib.pyplot as plt
@@ -28,7 +29,8 @@ import math
 ####################
 
 parser = argparse.ArgumentParser(description="Stereo Calibrate")
-parser.add_argument('--image_dir', default='Calibration_Aug15_large_board')
+parser.add_argument('--image_dir', default='Oct2_cal')
+parser.add_argument('--cal_dir', default='Oct2_cal')
 
 args, unknown = parser.parse_known_args()
 if unknown:
@@ -264,22 +266,20 @@ for cam_idx in range(num_cam):
 
 
 # Save results
-image_helper.save_np_file("D", D)
-image_helper.save_np_file("K", K)
-image_helper.save_np_file("R", R)
-image_helper.save_np_file("T", T)
+cal_info = CalibrationInfo(args.cal_dir, K=np.array(K), D=np.array(D), R=np.array(R), T=np.array(T))
+cal_info.write_json("calibration.json")
 image_helper.save_np_file("tvecs", tvecs)
 image_helper.save_np_file("rvecs", rvecs)
 
 
 D_np = np.asarray(D)
 K_np = np.asarray(K)
-K_np = np.reshape(K_np,[-1,2])
+K_np = np.reshape(K_np, [-1, num_cam])
 R_np = np.asarray(R)
 T_np = np.asarray(T)
 image_helper.save_text_file("D.txt", np.squeeze(D_np))
 image_helper.save_text_file("K.txt", K_np)
-image_helper.save_text_file("R.txt", np.reshape(R_np, [-1, 2]))
+image_helper.save_text_file("R.txt", np.reshape(R_np, [-1, num_cam]))
 image_helper.save_text_file("T.txt", np.squeeze(T_np))
 
 

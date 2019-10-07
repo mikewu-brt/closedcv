@@ -21,6 +21,7 @@ import argparse
 import math
 import sys
 from libs.Image import *
+from libs.CalibrationInfo import *
 import matplotlib as matplot
 matplot.use('TkAgg')
 import matplotlib.pyplot as plt
@@ -30,7 +31,8 @@ import matplotlib.pyplot as plt
 ####################
 
 parser = argparse.ArgumentParser(description="Stereo Calibrate")
-parser.add_argument('--image_dir', default='cal_dfk33ux265_08072019')
+parser.add_argument('--image_dir', default='Oct2_cal')
+parser.add_argument('--cal_dir', default='Oct2_cal')
 
 args, unknown = parser.parse_known_args()
 if unknown:
@@ -77,8 +79,9 @@ for cam_idx in range(num_cam):
     view_error.append(image_helper.load_np_file("view_error{}.npy".format(cam_idx)))
 
 imgshape = (setupInfo.SensorInfo.width, setupInfo.SensorInfo.width)
-K = image_helper.load_np_file("K.npy")
-D = image_helper.load_np_file("D.npy")
+cal_info = CalibrationInfo(args.cal_dir, json_fname="calibration.json")
+K = cal_info.K()
+D = cal_info.D()
 
 # Misc control
 

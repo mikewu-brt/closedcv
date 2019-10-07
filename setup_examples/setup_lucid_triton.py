@@ -37,10 +37,11 @@ class SensorInfo:
 
 class LensInfo:
     fl_mm = 25.0
+    focus_distance_mm = 20000.0
 
 
 class RigInfo:
-    module_name = "Lucid Triton - 25mm"
+    camera_module_name = "Lucid Triton - 25mm"
     cam_position_m = np.array([[0, 0, 0], [0.5, 0, 0]])
     input_image_filename = np.array(["Image_sn193800001_f{}.raw", "Image_sn193800001_f{}.raw"])
     module_name = ["A1", "A2"]

@@ -16,6 +16,7 @@ import os
 import importlib
 import numpy as np
 import cv2
+from libs.CalibrationInfo import *
 
 
 class Stereo:
@@ -34,16 +35,12 @@ class Stereo:
 
         self.__setup = importlib.import_module("{}.setup".format(image_dir))
 
-        self.__K = np.load(os.path.join(self.__image_dir, "K.npy"))
-        self.__R = np.load(os.path.join(self.__image_dir, "R.npy"))
-        self.__T = np.load(os.path.join(self.__image_dir, "T.npy"))
-        self.__D = np.load(os.path.join(self.__image_dir, "D.npy"))
+        self.__cal_info = CalibrationInfo(cal_dir=image_dir, json_fname="calibration.json")
 
         if img_shape is None:
             # Read an image file to determine the size
             img_shape = (self.__setup.SensorInfo.width, self.__setup.SensorInfo.height)
         self.__img_shape = img_shape
-
 
     @staticmethod
     def skew_symetric(vector_in):
@@ -106,12 +103,18 @@ class Stereo:
         Hinf = np.matmul(np.matmul(K2, R), np.linalg.inv(K1))
         return Hinf
 
+    def cal_info(self):
+        return self.__cal_info
+
     def fundamental_matrix(self, cam_idx):
-        return Stereo.compute_fundamental_matrix(self.__K[0], self.__K[cam_idx], self.__R[cam_idx], self.__T[cam_idx])
+        return Stereo.compute_fundamental_matrix(self.__cal_info.K(0),
+                                                 self.__cal_info.K(cam_idx),
+                                                 self.__cal_info.R(cam_idx),
+                                                 self.__cal_info.T(cam_idx))
 
     def essential_matirx(self, cam_idx):
         F = self.fundamental_matrix(cam_idx)
-        return Stereo.compute_essential_matrix(self.__K[0], self.__K[cam_idx], F)
+        return Stereo.compute_essential_matrix(self.__cal_info.K(0), self.__cal_info.K(cam_idx), F)
 
     def projection_matrix(self, cam_idx):
         """
@@ -120,19 +123,24 @@ class Stereo:
         :param cam_idx: Camera Index
         :return P: Projection Matrix
         """
-        return Stereo.compute_projection_matrix(self.__K[cam_idx], self.__R[cam_idx], self.__T[cam_idx])
+        return Stereo.compute_projection_matrix(self.__cal_info.K(cam_idx),
+                                                self.__cal_info.R(cam_idx),
+                                                self.__cal_info.T(cam_idx))
 
     def rectification_matrix(self, cam_idx):
-        return cv2.stereoRectify(self.__K[0], self.__D[0],
-                                                          self.__K[cam_idx], self.__D[cam_idx],
-                                                          self.__img_shape,
-                                                          self.__R[cam_idx], self.__T[cam_idx])
+        return cv2.stereoRectify(self.__cal_info.K(0),
+                                 self.__cal_info.D(0),
+                                 self.__cal_info.K(cam_idx),
+                                 self.__cal_info.D(cam_idx),
+                                 self.__img_shape,
+                                 self.__cal_info.R(cam_idx),
+                                 self.__cal_info.T(cam_idx))
 
     def homography_inf(self, cam_idx):
-        return Stereo.compute_homography_inf(self.__K[0], self.__K[cam_idx], self.__R[cam_idx])
+        return Stereo.compute_homography_inf(self.__cal_info.K(0), self.__cal_info.K(cam_idx), self.__cal_info.R(cam_idx))
 
     def undistort_image(self, img, cam_idx):
-        return cv2.undistort(img, self.__K[cam_idx], self.__D[cam_idx])
+        return cv2.undistort(img, self.__cal_info.K(cam_idx), self.__cal_info.D(cam_idx))
 
     def compute_distance_disparity(self, img_pts, T=None):
         """
@@ -157,10 +165,10 @@ class Stereo:
                 R1, R2, P1, P2, Q, roi1, roi2 = self.rectification_matrix()
 
                 # Rectify reference camera points
-                rect_ref = cv2.undistortPoints(src=img_pts[0], cameraMatrix=self.__K[0], distCoeffs=self.__D[0],
-                                                 R=R1, P=P1)
-                rect_src = cv2.undistortPoints(src=img_pts[cam_idx], cameraMatrix=self.__K[cam_idx],
-                                                 distCoeffs=self.__D[cam_idx], R=R2, P=P2)
+                rect_ref = cv2.undistortPoints(src=img_pts[0], cameraMatrix=self.__cal_info.K(0),
+                                               distCoeffs=self.__cal_info.D(0), R=R1, P=P1)
+                rect_src = cv2.undistortPoints(src=img_pts[cam_idx], cameraMatrix=self.__cal_info.K(cam_idx),
+                                                 distCoeffs=self.__cal_info.D(cam_idx), R=R2, P=P2)
 
                 rect_ref = rect_ref[:, 0, :]
                 rect_src = rect_src[:, 0, :]
@@ -200,7 +208,8 @@ class Stereo:
         """
         # First undistort the observed points to the ideal points
         P1 = self.projection_matrix(0)
-        x = cv2.undistortPoints(src=pts, cameraMatrix=self.__K[0], distCoeffs=self.__D[0], R=np.identity(3), P=P1)
+        x = cv2.undistortPoints(src=pts, cameraMatrix=self.__cal_info.K(0),
+                                distCoeffs=self.__cal_info.D(0), R=np.identity(3), P=P1)
 
         # Project the ideal points from the reference camera to the ideal points in cam_idx
         # x' = Hinf x + Kt/Z
@@ -211,14 +220,15 @@ class Stereo:
         x_p = cv2.convertPointsFromHomogeneous(np.matmul(Hinf, x))
 
         # Kt/z
-        x_d = np.matmul(self.__K[cam_idx], self.__T[cam_idx]) / distance
+        x_d = np.matmul(self.__cal_info.K(cam_idx), self.__cal_info.T(cam_idx)) / distance
         x_d = x_d[:2]
         x_p += x_d.T.reshape(-1, 1, 2)
 
         # Add distortion of cam 2
-        a = cv2.undistortPoints(src=x_p, cameraMatrix=self.__K[cam_idx], distCoeffs=np.zeros(5))
+        a = cv2.undistortPoints(src=x_p, cameraMatrix=self.__cal_info.K(cam_idx), distCoeffs=np.zeros(5))
         a = np.concatenate((a, np.ones((a.shape[0], 1, 1))), axis=2)
-        reproj_pts, J = cv2.projectPoints(a, np.zeros(3), np.zeros(3), self.__K[cam_idx], self.__D[cam_idx])
+        reproj_pts, J = cv2.projectPoints(a, np.zeros(3), np.zeros(3),
+                                          self.__cal_info.K(cam_idx), self.__cal_info.D(cam_idx))
 
         return reproj_pts
 
@@ -233,15 +243,15 @@ class Stereo:
         :return: Rectified reference and source views
         :return: New rectified P1, P2 matrices
         """
-        R1, R2, P1, P2, Q, roi1, roi2 = cv2.stereoRectify(self.__K[0], self.__D[0],
-                                                          self.__K[src_cam_idx], self.__D[src_cam_idx],
+        R1, R2, P1, P2, Q, roi1, roi2 = cv2.stereoRectify(self.__cal_info.K(0), self.__cal_info.D(0),
+                                                          self.__cal_info.K(src_cam_idx), self.__cal_info.D(src_cam_idx),
                                                           self.__img_shape,
-                                                          self.__R[src_cam_idx], self.__T[src_cam_idx])
+                                                          self.__cal_info.R(src_cam_idx), self.__cal_info.T(src_cam_idx))
 
-        mapx1, mapy1 = cv2.initUndistortRectifyMap(self.__K[0], self.__D[0], R1, P1,
+        mapx1, mapy1 = cv2.initUndistortRectifyMap(self.__cal_info.K(0), self.__cal_info.D(0), R1, P1,
                                                    self.__img_shape,
                                                    cv2.CV_32F)
-        mapx2, mapy2 = cv2.initUndistortRectifyMap(self.__K[src_cam_idx], self.__D[src_cam_idx], R2, P2,
+        mapx2, mapy2 = cv2.initUndistortRectifyMap(self.__cal_info.K(src_cam_idx), self.__cal_info.D(src_cam_idx), R2, P2,
                                                    self.__img_shape,
                                                    cv2.CV_32F)
 

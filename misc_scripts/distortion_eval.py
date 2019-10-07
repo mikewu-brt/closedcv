@@ -40,15 +40,15 @@ stereo = Stereo(args.cal_dir)
 nx = 2048
 ny = 1536
 
-K = stereo._Stereo__K[0]
-D = stereo._Stereo__D[0]
+K = stereo.cal_info().K()
+D = stereo.cal_info().D()
 #D = np.zeros(5)
 R = np.identity(3)
-mapx1, mapy1 = cv2.initUndistortRectifyMap(cameraMatrix=stereo._Stereo__K[0], distCoeffs=stereo._Stereo__D[0],
-                                           R=np.identity(3), newCameraMatrix=stereo._Stereo__K[0],
+mapx1, mapy1 = cv2.initUndistortRectifyMap(cameraMatrix=K[0], distCoeffs=D[0],
+                                           R=np.identity(3), newCameraMatrix=K[0],
                                            size=(nx, ny), m1type=cv2.CV_32FC1)
-mapx2, mapy2 = cv2.initUndistortRectifyMap(cameraMatrix=stereo._Stereo__K[1], distCoeffs=stereo._Stereo__D[1],
-                                           R=np.identity(3), newCameraMatrix=stereo._Stereo__K[1],
+mapx2, mapy2 = cv2.initUndistortRectifyMap(cameraMatrix=K[1], distCoeffs=D[1],
+                                           R=np.identity(3), newCameraMatrix=K[1],
                                            size=(nx, ny), m1type=cv2.CV_32FC1)
 
 dx1 = np.subtract(mapx1, np.arange(nx))
