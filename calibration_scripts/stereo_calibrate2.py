@@ -29,6 +29,7 @@ import matplotlib.pyplot as plt
 parser = argparse.ArgumentParser(description="Stereo Calibrate 2")
 parser.add_argument('--image_dir', default='Oct2_cal')
 parser.add_argument('--cal_dir', default='Oct2_cal')
+parser.add_argument('--fix_focal_length', action="store_true", default=False, help='use this option if the focal length is to be determined explicitly and then set to that value')
 
 args, unknown = parser.parse_known_args()
 if unknown:
@@ -160,11 +161,13 @@ else:
 print("")
 print("Calibrating Cameras")
 f = fl_mm * 1.0e-3 / (pixel_size_um * 1.0e-6)
-K_guess = np.array([[f, 0, setupInfo.SensorInfo.width*0.5], [0, f, setupInfo.SensorInfo.height*0.5], [0, 0, 1]])
+#K_guess = np.array([[f, 0, setupInfo.SensorInfo.width*0.5], [0, f, setupInfo.SensorInfo.height*0.5], [0, 0, 1]])
 
 R_guess = np.identity(3)
 
 i_flags = cv2.CALIB_USE_INTRINSIC_GUESS
+if args.fix_focal_length is True:
+    i_flags |= cv2.CALIB_FIX_FOCAL_LENGTH
 i_flags |= cv2.CALIB_ZERO_TANGENT_DIST
 i_flags |= cv2.CALIB_FIX_K3
 # i_flags |= cv2.CALIB_RATIONAL_MODEL
@@ -214,6 +217,14 @@ for cam_idx in range(num_cam):
     print("   Focal Length (mm): {}".format(fl_mm))
     print("   Chart: {}".format(setupInfo.ChartInfo.name))
 
+    if args.fix_focal_length is True:
+        K_guess = np.array([[setupInfo.CalibMagInfo.fixed_focal_length[cam_idx], 0, setupInfo.SensorInfo.width*0.5],
+                            [0, setupInfo.CalibMagInfo.fixed_focal_length[cam_idx], setupInfo.SensorInfo.height*0.5],
+                            [0, 0, 1]])
+    else:
+        K_guess = np.array([[f, 0, setupInfo.SensorInfo.width*0.5],
+                            [0, f, setupInfo.SensorInfo.height*0.5],
+                            [0, 0, 1]])
     # Intrinsic data
     obj_pts = []
     img_pts = []

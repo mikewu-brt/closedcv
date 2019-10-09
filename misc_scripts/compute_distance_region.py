@@ -217,9 +217,10 @@ for cam_idx in range(1, num_cam):
 
     # Plot results
     # Correct for angles in the ground truth measurements
-    delta = np.linalg.norm(ref_pts[cam_idx] - P2[:2, 2], axis=1)
-    theta = np.arctan(delta / P2[0, 0])
-    alpha = np.arctan(delta / P2[1, 1])
+    delta_x = ref_pts[cam_idx][:, 0] - P2[0, 2]
+    delta_y = ref_pts[cam_idx][:, 1] - P2[1, 2]
+    theta = np.arctan(delta_x / P2[0, 0])
+    alpha = np.arctan(delta_y / P2[1, 1])
     new_gt = np.cos(theta) * np.cos(alpha) * gt[0:len(theta)]
 
     # Sort the Ground truth (for display purposes)

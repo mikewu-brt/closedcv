@@ -119,7 +119,7 @@ class CalibrationInfo:
             }
 
             cal_info["module_calibration"][-1]["geometry"]["distortion"] = {
-                "polynominal": {
+                "polynomial": {
                     "distortion_center": {
                         "x": self.__K[cam_idx, 0, 2],
                         "y": self.__K[cam_idx, 1, 2],
@@ -176,7 +176,7 @@ class CalibrationInfo:
                 self.__T[cam_idx, 1, 0] = pfc["extrinsics"]["canonical"]["translation"]["y"]
                 self.__T[cam_idx, 2, 0] = pfc["extrinsics"]["canonical"]["translation"]["z"]
 
-            self.__D[cam_idx, 0] = np.array(module_cal["geometry"]["distortion"]["polynominal"]["coeffs"])
+            self.__D[cam_idx, 0] = np.array(module_cal["geometry"]["distortion"]["polynomial"]["coeffs"])
             cam_idx += 1
 
     def __init__(self, cal_dir, json_fname=None, K=None, D=None, R=None, T=None):

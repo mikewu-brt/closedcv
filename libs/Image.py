@@ -58,7 +58,7 @@ class Image:
             scale /= 2.0
         return scale
 
-    def read_image_file(self, camera_idx, capture_idx, scale_to_8bit=True, raw_output=False):
+    def read_image_file(self, camera_idx, capture_idx, scale_to_8bit=True, raw_output=False, file_name = None ):
         """
         Process raw image files into "Numpy" arrays.
 
@@ -70,7 +70,10 @@ class Image:
         if self.__setup is None:
             print("No setup file specified")
             sys.exit(1)
-        fname = os.path.join(self.__directory, self.__setup.RigInfo.input_image_filename[camera_idx].format(capture_idx))
+        if file_name is None:
+            fname = os.path.join(self.__directory, self.__setup.RigInfo.input_image_filename[camera_idx].format(capture_idx))
+        else:
+            fname = os.path.join(self.__directory, file_name)
         print("Reading {}".format(fname))
         try:
             if os.path.splitext(fname)[1] == ".npy":

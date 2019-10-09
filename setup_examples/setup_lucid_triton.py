@@ -55,3 +55,11 @@ class ChartInfo:
     nx = 31
     ny = 24
     size_mm = 40.0
+
+
+# The following class is used for computing the focal length of each camera on the rig by using the knowledge of object distance and its image
+class CalibMagInfo:
+    input_image_filename = np.array(["Image_sn193800001_f{}.raw", "Image_sn193800001_f{}.raw"])
+    fixed_focal_length = np.array([5580.4, 5573.9, 5575]) # in pixels
+    obj_dist = np.array([3426, 3489]) # distance to object  in mm
+    delta = 4 # region to serach around the center
