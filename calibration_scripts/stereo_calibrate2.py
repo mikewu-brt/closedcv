@@ -212,10 +212,13 @@ tvecs = []
 for cam_idx in range(num_cam):
     print("")
     print("Compute intrinsics for cam {}".format(setupInfo.RigInfo.module_name[cam_idx]))
+    print("   Manufacturer: {}".format(setupInfo.RigInfo.camera_module_manufacturer))
+    print("   Module Model: {}".format(setupInfo.RigInfo.camera_module_model))
     print("   Sensor Type: {}".format(setupInfo.SensorInfo.type))
     print("   Sensor Pixel Size (um): {}".format(pixel_size_um))
+    print("   Lens Type: {}".format(setupInfo.LensInfo.type))
     print("   Focal Length (mm): {}".format(fl_mm))
-    print("   Chart: {}".format(setupInfo.ChartInfo.name))
+    print("   Chart: {}, ({}, {}) x {} mm".format(setupInfo.ChartInfo.name, setupInfo.ChartInfo.nx, setupInfo.ChartInfo.ny, setupInfo.ChartInfo.size_mm))
 
     if args.fix_focal_length is True:
         K_guess = np.array([[setupInfo.CalibMagInfo.fixed_focal_length[cam_idx], 0, setupInfo.SensorInfo.width*0.5],

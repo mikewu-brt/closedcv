@@ -28,7 +28,7 @@ import cv2
 
 
 class SensorInfo:
-    type = "IMX428"
+    type = "SENSOR_IMX428"
     pixel_size_um = 4.5
     width = 3208
     height = 2200
@@ -36,18 +36,25 @@ class SensorInfo:
 
 
 class LensInfo:
+    manufacturer = "Computar"
+    model = "V2528_MPY"
+    type = "LENS_{}_{}".format(manufacturer.upper(), model.upper())
     fl_mm = 25.0
     focus_distance_mm = 20000.0
 
 
 class RigInfo:
-    camera_module_name = "Lucid Triton - 25mm"
-    cam_position_m = np.array([[0, 0, 0], [0.5, 0, 0]])
-    input_image_filename = np.array(["Image_sn193800001_f{}.raw", "Image_sn193800001_f{}.raw"])
-    module_name = ["A1", "A2"]
+    camera_module_manufacturer = "Lucid"
+    camera_module_model = "TRI071S"
+    camera_module_serial_number = ["SN193500101", "SN193500102", "SN192900007"]
+    input_image_filename = np.array(["Image_{}_f{{}}.raw".format(camera_module_serial_number[0].lower()),
+                                     "Image_{}_f{{}}.raw".format(camera_module_serial_number[1].lower()),
+                                     "Image_{}_f{{}}.raw".format(camera_module_serial_number[2].lower())])
+    cam_position_m = np.array([[0.0, 0.0, 0.0], [0.5, 0.0, 0.0], [-0.38, 0.0, 0.0]])
+    module_name = ["A1", "A2", "A3"]
     left_justified = False
-    packed = False
-    cv2_color_conversion = cv2.COLOR_BayerRG2BGR
+    packed = True
+    cv2_color_conversion = cv2.COLOR_BayerBG2BGR
 
 
 class ChartInfo:

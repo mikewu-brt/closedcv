@@ -16,7 +16,7 @@ import cv2
 
 
 class SensorInfo:
-    type = "IMX265"
+    type = "SENSOR_IMX265"
     pixel_size_um = 3.45
     width = 2048
     height = 1536
@@ -24,12 +24,16 @@ class SensorInfo:
 
 
 class LensInfo:
+    manufacturer = "Imaging_Source"
+    model = "TPL_1220"
+    type = "LENS_{}_{}".format(manufacturer.upper(), model.upper())
     fl_mm = 12.0
     focus_distance_mm = 5000.0
 
 
 class RigInfo:
-    camera_module_name = "DKF33UX265"
+    camera_module_manufacturer = "Imagining Source"
+    camera_module_model = "DKF33UX265"
     cam_position_m = np.array([[0, 0, 0], [1.116, 0, 0]])
     input_image_filename = np.array(["cap_rit_{}.rggb", "cap_lft_{}.rggb"])
     module_name = ["A1", "A2"]

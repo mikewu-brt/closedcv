@@ -73,6 +73,15 @@ class CalibrationInfo:
             cal_info["module_calibration"].append([])
             cal_info["module_calibration"][-1] = {}
             cal_info["module_calibration"][-1]["camera_id"] = self.__setup.RigInfo.module_name[cam_idx]
+
+            cal_info["module_calibration"][-1]["manufacturer"] = self.__setup.RigInfo.camera_module_manufacturer
+            cal_info["module_calibration"][-1]["model"] = self.__setup.RigInfo.camera_module_model
+            cal_info["module_calibration"][-1]["serial_number"] = self.__setup.RigInfo.camera_module_serial_number[cam_idx]
+            cal_info["module_calibration"][-1]["sensor_type"] = self.__setup.SensorInfo.type
+            cal_info["module_calibration"][-1]["lens_type"] = self.__setup.LensInfo.type
+            cal_info["module_calibration"][-1]["focal_length_mm"] = self.__setup.LensInfo.fl_mm
+            cal_info["module_calibration"][-1]["pixel_size_mm"] = self.__setup.SensorInfo.pixel_size_um / 1000.0
+
             cal_info["module_calibration"][-1]["geometry"] = {}
 
             k_mat = {
