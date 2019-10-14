@@ -118,7 +118,7 @@ if process_image_files:
                 if use_2step_findchessboard:
                     corners2[cam_idx, 0, :, :, :] = cv2.cornerSubPix(gray, corners, (11, 11), (-1, -1), criteria)
                 else:
-                    corners2[cam_idx, 0, :, :, :] = corners
+                    corners2[cam_idx, 0, :, :, :] = corners[::-1]
                 intrinsic_pts[cam_idx].append(corners2[cam_idx, 0].copy())
                 if show_images:
                     img2 = cv2.drawChessboardCorners(img, (nx, ny), corners2[cam_idx, 0], True)

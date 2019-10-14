@@ -36,9 +36,11 @@ if unknown:
 
 ####################
 
+image_helper = Image(args.cal_dir)
 stereo = Stereo(args.cal_dir)
-nx = 2048
-ny = 1536
+setup_info = image_helper.setup_info()
+nx = setup_info.SensorInfo.width
+ny = setup_info.SensorInfo.height
 
 K = stereo.cal_info().K()
 D = stereo.cal_info().D()
@@ -66,12 +68,13 @@ x, y = np.meshgrid(np.arange(0, nx, decimate), -np.arange(0, ny, decimate))
 
 
 plt.figure(1).clear()
+scale = 20.0  # Quiver lines are "scale" times larger
 C = np.hypot(dx1, dy1)
-plt.quiver(x, y, dx1, dy1, C, pivot='tip', angles='xy', scale_units='xy', scale=0.05, minlength=0)
+plt.quiver(x, y, dx1, dy1, C, pivot='tip', angles='xy', scale_units='xy', scale=1.0/scale, minlength=0)
 plt.title("Distortion - Reference")
 
 
 plt.figure(2).clear()
 C = np.hypot(dx2, dy2)
-plt.quiver(x, y, dx2, dy2, C, pivot='tip', angles='xy', scale_units='xy', scale=0.05, minlength=0)
+plt.quiver(x, y, dx2, dy2, C, pivot='tip', angles='xy', scale_units='xy', scale=1.0/scale, minlength=0)
 plt.title("Distortion - Source")
