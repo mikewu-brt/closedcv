@@ -32,6 +32,7 @@ class LensInfo:
 
 
 class RigInfo:
+    rig_manufacturer = "Light Labs - NJ"
     camera_module_manufacturer = "Imagining Source"
     camera_module_model = "DKF33UX265"
     cam_position_m = np.array([[0, 0, 0], [1.116, 0, 0]])

@@ -44,6 +44,7 @@ class LensInfo:
 
 
 class RigInfo:
+    rig_manufacturer = "Light Labs - NJ"
     camera_module_manufacturer = "Lucid"
     camera_module_model = "TRI071S"
     camera_module_serial_number = ["SN193500101", "SN193500102", "SN192900007"]
