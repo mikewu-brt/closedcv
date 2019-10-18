@@ -16,6 +16,10 @@ import cv2
 
 class Checkerboard:
 
+    # Constants
+    CHECKERBOARD = 0
+    CIRCLE = 1
+
     # Variables
     __canvas_width = 3840
     __canvas_height = 2160
@@ -33,7 +37,7 @@ class Checkerboard:
     def __center(self):
         return int(self.__canvas_width / 2), int(self.__canvas_height / 2)
 
-    def generate(self, shift_x=0, shift_y=0):
+    def generate(self, shift_x=0, shift_y=0, type=CHECKERBOARD, color=(0, 0, 0)):
         img = self.blank_canvas(self.__canvas_width, self.__canvas_height)
         xc, yc = self.__center()
 
@@ -48,7 +52,13 @@ class Checkerboard:
             for x in range(x_start, xs + self.__nx * self.__checker_width, 2 * self.__checker_width):
                 pt1 = (x, y)
                 pt2 = (x + self.__checker_width - 1, y + self.__checker_height - 1)
-                cv2.rectangle(img, pt1, pt2, color=(0, 0, 0), thickness=cv2.FILLED)
+                if type == Checkerboard.CHECKERBOARD:
+                    cv2.rectangle(img, pt1, pt2, color=color, thickness=cv2.FILLED)
+                elif type == Checkerboard.CIRCLE:
+                    cv2.circle(img, pt1, int(self.__checker_width/4), color=color, thickness=cv2.FILLED)
+                else:
+                    print("Unknown type")
+                    sys.exit(-1)
         return img
 
     def get_canvas_size(self):

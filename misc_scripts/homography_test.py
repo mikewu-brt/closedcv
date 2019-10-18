@@ -41,6 +41,8 @@ if unknown:
 
 ####################
 
+estimate_from_center_only = False
+
 image_helper = Image(args.image_dir)
 display_size = image_helper.display_size(1024)
 setupInfo = image_helper.setup_info()
@@ -67,32 +69,44 @@ while not all_files_read:
             break
 
         ret, corners = cv2.findChessboardCornersSB(img, (nx, ny), None)
-        img2 = cv2.drawChessboardCorners(img.copy(), (nx, ny), corners, True)
 
         # Compute the distance to the center of the sensor
         dist = []
         if ret:
             corners = corners[::-1]
-            dist = np.linalg.norm(np.squeeze(corners - center), axis=1)
+            img2 = cv2.drawChessboardCorners(img.copy(), (nx, ny), corners, True)
+            img2 = cv2.resize(img2, None, fx=display_size, fy=display_size)
+            img2 = cv2.circle(img2, (img2.shape[1] >> 1, img2.shape[0] >> 1), 5, (255, 0, 0), 3)
+            cv2.imshow("{}".format(setupInfo.RigInfo.module_name[cam_idx]), img2)
 
-            if dist[dist <= max_dist].shape[0] >= 4:
+            obj_pts = []
+            dist = np.linalg.norm(np.squeeze(corners - center), axis=1)
+            if estimate_from_center_only and dist[dist <= max_dist].shape[0] >= 4:
                 obj_pts = objp[dist <= max_dist]
                 img_pts = corners[dist <= max_dist]
+            elif not estimate_from_center_only and len(corners) >= 4:
+                obj_pts = objp
+                img_pts = corners
+            else:
+                print("Not enough points to compute homography")
+                # sys.exit(-1)
+
+            if len(obj_pts) > 0:
                 H, mask = cv2.findHomography(obj_pts, img_pts)
                 print("H {} - num points: {}".format(setupInfo.RigInfo.module_name[cam_idx], len(obj_pts)))
                 print("{}".format(H))
 
                 # Compute the ideal corners using homography
                 xip = cv2.convertPointsFromHomogeneous(np.matmul(H, np.squeeze(xi.copy()).T).T)
-                error = xip - corners
+                error = corners - xip
                 p = plt.figure(cam_idx)
                 p.clear()
-                x = corners[:, 0, 0]
-                y = corners[:, 0, 1]
+                x = xip[:, 0, 0]
+                y = xip[:, 0, 1]
                 u = error[:, 0, 0]
                 v = error[:, 0, 1]
                 plt.gca().invert_yaxis()
-                plt.quiver(x, y, u, v, angles='xy', units='xy', scale_units='inches', scale=2.0, pivot='tail')
+                plt.quiver(x, y, u, v, angles='uv', units='xy', minlength=1, scale_units='xy', scale=0.01, pivot='tip')
                 plt.draw()
 
                 p = plt.figure(10+cam_idx)
@@ -102,13 +116,11 @@ while not all_files_read:
                 plt.scatter(corners[:, 0, 0], corners[::-1, 0, 1], color='g', s=1)
                 plt.draw()
 
+                max_x_idx = np.argmax(np.abs(u))
+                max_y_idx = np.argmax(np.abs(v))
+                print("Max error ({}, {})".format(u[max_x_idx], v[max_y_idx]))
         else:
-            print("Not enough points to compute homography")
-            sys.exit(-1)
-
-        img2 = cv2.resize(img2, None, fx=display_size, fy=display_size)
-        img2 = cv2.circle(img2, (img2.shape[1] >> 1, img2.shape[0] >> 1), 5, (255, 0, 0), 3)
-        cv2.imshow("{}".format(setupInfo.RigInfo.module_name[cam_idx]), img2)
+            print("Chessboard not found")
 
     if not all_files_read:
         plt.waitforbuttonpress(0.1)
