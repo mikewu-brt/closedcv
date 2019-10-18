@@ -58,6 +58,7 @@ checker_size_mm = setupInfo.ChartInfo.size_mm
 objp[:, :2] = np.mgrid[0:nx, 0:ny].T.reshape(-1, 2) * (checker_size_mm * 1.0e-3)
 xi = cv2.convertPointsToHomogeneous(objp[:, 0:2])
 
+plt.figure(0)
 
 orientation = 0
 all_files_read = False
@@ -74,10 +75,7 @@ while not all_files_read:
         dist = []
         if ret:
             corners = corners[::-1]
-            img2 = cv2.drawChessboardCorners(img.copy(), (nx, ny), corners, True)
-            img2 = cv2.resize(img2, None, fx=display_size, fy=display_size)
-            img2 = cv2.circle(img2, (img2.shape[1] >> 1, img2.shape[0] >> 1), 5, (255, 0, 0), 3)
-            cv2.imshow("{}".format(setupInfo.RigInfo.module_name[cam_idx]), img2)
+            img = cv2.drawChessboardCorners(img.copy(), (nx, ny), corners, True)
 
             obj_pts = []
             dist = np.linalg.norm(np.squeeze(corners - center), axis=1)
@@ -109,18 +107,22 @@ while not all_files_read:
                 plt.quiver(x, y, u, v, angles='uv', units='xy', minlength=1, scale_units='xy', scale=0.01, pivot='tip')
                 plt.draw()
 
-                p = plt.figure(10+cam_idx)
-                p.clear()
-                plt.gca().invert_yaxis()
-                plt.scatter(xip[:, 0, 0], xip[::-1, 0, 1], color='k', s=1)
-                plt.scatter(corners[:, 0, 0], corners[::-1, 0, 1], color='g', s=1)
-                plt.draw()
+                #p = plt.figure(10+cam_idx)
+                #p.clear()
+                #plt.gca().invert_yaxis()
+                #plt.scatter(xip[:, 0, 0], xip[::-1, 0, 1], color='k', s=1)
+                #plt.scatter(corners[:, 0, 0], corners[::-1, 0, 1], color='g', s=1)
+                #plt.draw()
 
                 max_x_idx = np.argmax(np.abs(u))
                 max_y_idx = np.argmax(np.abs(v))
                 print("Max error ({}, {})".format(u[max_x_idx], v[max_y_idx]))
         else:
             print("Chessboard not found")
+
+        img2 = cv2.resize(img, None, fx=display_size, fy=display_size)
+        img2 = cv2.circle(img2, (img2.shape[1] >> 1, img2.shape[0] >> 1), 5, (255, 0, 0), 3)
+        cv2.imshow("{}".format(setupInfo.RigInfo.module_name[cam_idx]), img2)
 
     if not all_files_read:
         plt.waitforbuttonpress(0.1)
