@@ -10,6 +10,11 @@
 #  @brief
 
 
+# TV Diagonal Sizes
+# Hubble - 54.6"
+# Webb / Kepler - 42.5"
+# Main Area - 85.6"
+
 def pixel_size_mm(width_px, height_px, diagonal_in):
     dp = (width_px ** 2 + height_px ** 2) ** 0.5
     d_mm = diagonal_in * 25.4

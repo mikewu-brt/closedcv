@@ -10,6 +10,7 @@
 #  @brief
 #  Checkerboard chart construction
 
+import sys
 import numpy as np
 import cv2
 
@@ -37,28 +38,32 @@ class Checkerboard:
     def __center(self):
         return int(self.__canvas_width / 2), int(self.__canvas_height / 2)
 
-    def generate(self, shift_x=0, shift_y=0, type=CHECKERBOARD, color=(0, 0, 0)):
+    def generate(self, shift_x=0, shift_y=0, chart=CHECKERBOARD, color=(0, 0, 0)):
         img = self.blank_canvas(self.__canvas_width, self.__canvas_height)
         xc, yc = self.__center()
 
         xs = int(xc - self.__nx / 2.0 * self.__checker_width + shift_x)
         ys = int(yc - self.__ny / 2.0 * self.__checker_height + shift_y)
 
-        for y_idx in range(self.__ny):
-            y = ys + y_idx * self.__checker_height
-            x_start = xs
-            if y_idx & 1:
-                x_start += self.__checker_width
-            for x in range(x_start, xs + self.__nx * self.__checker_width, 2 * self.__checker_width):
-                pt1 = (x, y)
-                pt2 = (x + self.__checker_width - 1, y + self.__checker_height - 1)
-                if type == Checkerboard.CHECKERBOARD:
+        if chart == Checkerboard.CHECKERBOARD:
+            for y_idx in range(self.__ny):
+                y = ys + y_idx * self.__checker_height
+                x_start = xs
+                if y_idx & 1:
+                    x_start += self.__checker_width
+                for x in range(x_start, xs + self.__nx * self.__checker_width, 2 * self.__checker_width):
+                    pt1 = (x, y)
+                    pt2 = (x + self.__checker_width - 1, y + self.__checker_height - 1)
                     cv2.rectangle(img, pt1, pt2, color=color, thickness=cv2.FILLED)
-                elif type == Checkerboard.CIRCLE:
-                    cv2.circle(img, pt1, int(self.__checker_width/4), color=color, thickness=cv2.FILLED)
-                else:
-                    print("Unknown type")
-                    sys.exit(-1)
+
+        elif chart == Checkerboard.CIRCLE:
+            for y in range(ys, ys + self.__ny * self.__checker_height, self.__checker_height):
+                for x in range(xs, xs + self.__nx * self.__checker_width, self.__checker_width):
+                    cv2.circle(img, (x, y), int(self.__checker_width / 4), color=color, thickness=cv2.FILLED)
+        else:
+            print("Unknown chart type")
+            sys.exit(-1)
+
         return img
 
     def get_canvas_size(self):
