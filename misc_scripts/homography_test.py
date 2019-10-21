@@ -69,12 +69,14 @@ while not all_files_read:
             all_files_read = True
             break
 
-        ret, corners = cv2.findChessboardCornersSB(img, (nx, ny), None)
+        print("Searching...")
+        #ret, corners = cv2.findChessboardCornersSB(img, (nx, ny), None)
+        ret, corners = cv2.findCirclesGrid(img, (nx, ny), None)
 
         # Compute the distance to the center of the sensor
         dist = []
         if ret:
-            corners = corners[::-1]
+            #corners = corners[::-1]
             img = cv2.drawChessboardCorners(img.copy(), (nx, ny), corners, True)
 
             obj_pts = []
