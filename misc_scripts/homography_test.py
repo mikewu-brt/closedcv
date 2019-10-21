@@ -41,7 +41,8 @@ if unknown:
 
 ####################
 
-estimate_from_center_only = False
+estimate_from_center_only = True
+use_saved_results = True
 
 image_helper = Image(args.image_dir)
 display_size = image_helper.display_size(1024)
@@ -60,10 +61,21 @@ xi = cv2.convertPointsToHomogeneous(objp[:, 0:2])
 
 plt.figure(0)
 
+find_ret = []
+find_corners = []
+if use_saved_results:
+    # Load previous results
+    find_ret = image_helper.load_np_file("distortion_find_ret.npy")
+    find_corners = image_helper.load_np_file("distortion_find_corners.npy")
+
 orientation = 0
 lens_shade_filter = []
 for cam_idx in range(image_helper.num_cam()):
     lens_shade_filter.append(image_helper.load_np_file("lens_shading_{}.npy".format(cam_idx)))
+    if not use_saved_results:
+        find_ret.append([])
+        find_corners.append([])
+
 all_files_read = False
 while not all_files_read:
     for cam_idx in range(image_helper.num_cam()):
@@ -71,18 +83,26 @@ while not all_files_read:
         if img_tmp is None:
             all_files_read = True
             break
-        image_normalized = img_tmp * lens_shade_filter[cam_idx]
+
+        image_normalized = (img_tmp - 64.0 * 16.0) * lens_shade_filter[cam_idx] + 64.0 * 16.0
+        image_normalized[image_normalized < 0.0] = 0.0
         max_val = np.max(image_normalized)
-        print("max value")
-        print(max_val)
-        image_normalized = (image_normalized/max_val) * (255*256)
-        print(np.max(image_normalized))
+        print("max value: {}".format(max_val))
+        image_normalized = (image_normalized/max_val) * ((256*256) - 1)
+        print("Normalized max value: {}".format(np.max(image_normalized)))
 
-        print("Searching...")
-        img = np.round(image_normalized/(256)).astype(np.uint8)
+        img = np.round(image_normalized/256).astype(np.uint8)
 
-        #ret, corners = cv2.findChessboardCornersSB(img, (nx, ny), None)
-        ret, corners = cv2.findCirclesGrid(img, (nx, ny), None)
+        if use_saved_results:
+            ret = find_ret[cam_idx][orientation]
+            corners = find_corners[cam_idx][orientation]
+        else:
+            print("Searching...")
+            ret, corners = cv2.findCirclesGrid(img, (nx, ny), None)
+
+            #ret, corners = cv2.findChessboardCornersSB(img, (nx, ny), None)
+            find_ret[cam_idx].append(ret)
+            find_corners[cam_idx].append(corners)
 
         # Compute the distance to the center of the sensor
         dist = []
@@ -137,6 +157,8 @@ while not all_files_read:
         img2 = cv2.circle(img2, (img2.shape[1] >> 1, img2.shape[0] >> 1), 5, (255, 0, 0), 3)
         cv2.imshow("{}".format(setupInfo.RigInfo.module_name[cam_idx]), img2)
 
+        print("")
+
     if not all_files_read:
         plt.waitforbuttonpress(0.1)
         key = cv2.waitKey(0)
@@ -145,3 +167,6 @@ while not all_files_read:
     orientation += 1
 
 
+if not use_saved_results:
+    image_helper.save_np_file("distortion_find_ret", find_ret)
+    image_helper.save_np_file("distortion_find_corners", find_corners)
