@@ -35,6 +35,7 @@ args, unknown = parser.parse_known_args()
 if unknown:
     print("Unknown options: {}".format(unknown))
 
+common_gain_flag = True  # compute the lens shading gain using gray image if true (if false compute gain separately for each channel)
 ####################
 
 image_helper = Image(args.image_dir)
@@ -50,8 +51,17 @@ while not all_files_read:
         if img is None:
             all_files_read = True
             break
-        max_val = np.max(gray)
-        img_new = (1/img) * max_val
+        if common_gain_flag is True:
+            max_val = np.max(gray)
+            gain = (1/gray) * max_val
+            img_new = np.empty(img.shape)
+            img_new[:,:,0] = gain
+            img_new[:,:,1] = gain
+            img_new[:,:,2] = gain
+        else:
+            max_val_vec = np.max(img,axis=(0,1))
+            img_new = (1/img) * max_val_vec
+
         cal_file_helper.save_np_file("lens_shading_{}".format(cam_idx), img_new)
 
         img2 = cv2.resize(img, None, fx=display_size, fy=display_size)
