@@ -35,8 +35,9 @@ class RigInfo:
     rig_manufacturer = "Light Labs - NJ"
     camera_module_manufacturer = "Imagining Source"
     camera_module_model = "DKF33UX265"
-    cam_position_m = np.array([[0, 0, 0], [1.116, 0, 0]])
+    camera_module_serial_number = ["SN1?", "SN2?"]
     input_image_filename = np.array(["cap_rit_{}.rggb", "cap_lft_{}.rggb"])
+    cam_position_m = np.array([[0, 0, 0], [1.116, 0, 0]])
     module_name = ["A1", "A2"]
     left_justified = True
     packed = False

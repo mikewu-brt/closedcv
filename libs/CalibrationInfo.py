@@ -192,6 +192,16 @@ class CalibrationInfo:
             self.__D[cam_idx, 0] = np.array(module_cal["geometry"]["distortion"]["polynomial"]["coeffs"])
             cam_idx += 1
 
+    def checkin_cal_file(self):
+        infile = os.path.join(self.__cal_dir, "calibration.json")
+
+        outfile = "cal"
+        for sn in self.__setup.RigInfo.camera_module_serial_number:
+            outfile += "_{}".format(sn)
+        outfile += "_{}mm.json".format(int(self.__setup.LensInfo.fl_mm))
+        cmd = "cp \"{}\" cal-files/{}".format(infile, outfile)
+        os.system(cmd)
+
     def __init__(self, cal_dir, json_fname=None, K=None, D=None, R=None, T=None):
         path_to_image_dir = os.getenv("PATH_TO_IMAGE_DIR")
         if path_to_image_dir is None:
