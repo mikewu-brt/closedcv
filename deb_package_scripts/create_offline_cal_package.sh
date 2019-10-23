@@ -72,7 +72,6 @@ create_package() {
         --deb-pre-depends python3-six \
         --deb-pre-depends python3-traitlets \
         --deb-pre-depends python3-wheel \
-        --deb-pre-depends python3-jsons \
         --name depth_offline_calibration \
         --version $1 \
         --iteration $2 \
