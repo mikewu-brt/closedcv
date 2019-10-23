@@ -22,6 +22,7 @@ import os
 import importlib
 import argparse
 from libs.Image import *
+from libs.Distortion import *
 import matplotlib as matplot
 matplot.use('TkAgg')
 import matplotlib.pyplot as plt
@@ -31,9 +32,8 @@ import matplotlib.pyplot as plt
 # Input Parameters
 ####################
 
-parser = argparse.ArgumentParser(description="Stereo Calibrate 2")
-parser.add_argument('--image_dir', default='Calibration_Aug23')
-parser.add_argument('--cal_dir', default='Calibration_Aug23')
+parser = argparse.ArgumentParser(description="Homography Test")
+parser.add_argument('--image_dir', default='tv_86in_circlegrid_oct18')
 
 args, unknown = parser.parse_known_args()
 if unknown:
@@ -51,7 +51,7 @@ setupInfo = image_helper.setup_info()
 nx = setupInfo.ChartInfo.nx
 ny = setupInfo.ChartInfo.ny
 center = np.array([setupInfo.SensorInfo.width * 0.5, setupInfo.SensorInfo.height * 0.5])
-max_dist = setupInfo.SensorInfo.width * 1.0 / 16.0
+max_dist = setupInfo.SensorInfo.width * 1.0 / 8.0
 
 # Prepare object points, like (0,0,0), (1,0,0), (2,0,0) ....,(6,5,0)
 objp = np.zeros((nx*ny, 3), np.float32)
@@ -76,9 +76,13 @@ for cam_idx in range(image_helper.num_cam()):
         find_ret.append([])
         find_corners.append([])
 
+distortion_error = []
 all_files_read = False
 while not all_files_read:
     for cam_idx in range(image_helper.num_cam()):
+        if orientation == 0:
+            distortion_error.append([])
+
         img_tmp, _ = image_helper.read_image_file(cam_idx, orientation, scale_to_8bit=False)
         if img_tmp is None:
             all_files_read = True
@@ -130,6 +134,7 @@ while not all_files_read:
                 # Compute the ideal corners using homography
                 xip = cv2.convertPointsFromHomogeneous(np.matmul(H, np.squeeze(xi.copy()).T).T)
                 error = corners - xip
+                distortion_error[cam_idx].append(error)
                 p = plt.figure(cam_idx)
                 p.clear()
                 x = xip[:, 0, 0]
@@ -161,7 +166,7 @@ while not all_files_read:
 
     if not all_files_read:
         plt.waitforbuttonpress(0.1)
-        key = cv2.waitKey(0)
+        key = cv2.waitKey(50)
         if key == 27:
             break
     orientation += 1
@@ -170,3 +175,26 @@ while not all_files_read:
 if not use_saved_results:
     image_helper.save_np_file("distortion_find_ret", find_ret)
     image_helper.save_np_file("distortion_find_corners", find_corners)
+
+
+img_shape = (setupInfo.SensorInfo.height, setupInfo.SensorInfo.width)
+n = find_corners[0].shape[0] * find_corners[0].shape[1]
+
+c = np.squeeze(np.array(find_corners[0]), axis=2).reshape(n, 2)
+e = np.squeeze(np.array(distortion_error[0]), axis=2).reshape(n, 2)
+
+dist_map = Distortion.compute_distortion_map(img_shape, c, e)
+cv2.destroyAllWindows()
+
+step = 1
+plt.figure(10).clear()
+plt.imshow(dist_map[::step, ::step, 0])
+plt.colorbar()
+plt.title('X Error')
+
+plt.figure(11).clear()
+plt.imshow(dist_map[::step, ::step, 1])
+plt.colorbar()
+plt.title('Y Error')
+
+
