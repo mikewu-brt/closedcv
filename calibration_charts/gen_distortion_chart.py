@@ -22,10 +22,14 @@ import matplotlib.pyplot as plt
 parser = argparse.ArgumentParser(description="Generate Distortion Charts")
 parser.add_argument('--chart_type', default='circle', help="\'circle\' or \'checkerboard\'")
 parser.add_argument('--tv', default='main', help="\'main\', \'hubble\', \'webb\' or \'kepler\'")
-parser.add_argument('--num_x', default=51, help="Number of checkerboards / circles along X")
-parser.add_argument('--num_y', default=32, help="Number of checkerboards / circles along Y")
-parser.add_argument('--size', default=60, help="Checkerboard size (or circle spacing)")
-parser.add_argument('--shift', default=12, help="Pixel shift per display")
+parser.add_argument('--num_x', default=52, type=int, help="Number of checkerboards / circles along X")
+parser.add_argument('--num_y', default=34, type=int, help="Number of checkerboards / circles along Y")
+parser.add_argument('--size', default=60, type=int, help="Checkerboard size (or circle spacing)")
+parser.add_argument('--shift', default=12, type=int, help="Pixel shift per display")
+parser.add_argument('--offset_x', default=0, type=int, help="Start x offset")
+parser.add_argument('--offset_y', default=0, type=int, help="Start y offset")
+parser.add_argument('--vignetting', action="store_true", default=False,
+                    help='Displays blank screen for vignetting estimation.')
 
 args, unknown = parser.parse_known_args()
 if unknown:
@@ -80,11 +84,13 @@ img = ck.blank_canvas(tv_width, tv_height)
 cv2.imshow("Checkerboard", img)
 cv2.setWindowProperty("Checkerboard", prop_id=cv2.WND_PROP_FULLSCREEN, prop_value=cv2.WINDOW_FULLSCREEN)
 cv2.moveWindow("Checkerboard", -1230, -2160)
-cv2.waitKey(0)
+if args.vignetting:
+    # Pause
+    cv2.waitKey(0)
 
 # Project checkerboard or circle chart
-for y in range(0, args.size, pixel_shift):
-    for x in range(0, args.size, pixel_shift):
+for y in range(args.offset_y, args.size + args.offset_y, pixel_shift):
+    for x in range(args.offset_x, args.size + args.offset_x, pixel_shift):
         img = ck.generate(shift_x=x, shift_y=y, chart=chart)
         print("x: {}, y: {}".format(x, y))
 
