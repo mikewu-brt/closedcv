@@ -40,7 +40,7 @@ if unknown:
 ####################
 
 estimate_from_center_only = True
-use_saved_results = True
+use_saved_results = False
 
 image_helper = Image(args.image_dir)
 display_size = image_helper.display_size(1024)
@@ -104,7 +104,11 @@ while not all_files_read:
 
             #ret, corners = cv2.findChessboardCornersSB(img, (nx, ny), None)
             find_ret[cam_idx].append(ret)
-            find_corners[cam_idx].append(corners)
+            if ret:
+                find_corners[cam_idx].append(corners)
+            else:
+                # Fill with zeros
+                find_corners[cam_idx].append(np.zeros((nx * ny, 1, 2)))
 
         # Compute the distance to the center of the sensor
         dist = []
@@ -132,7 +136,7 @@ while not all_files_read:
                 # Compute the ideal corners using homography
                 xip = cv2.convertPointsFromHomogeneous(np.matmul(H, np.squeeze(xi.copy()).T).T)
                 error = corners - xip
-                distortion_error[cam_idx].append(error)
+                distortion_error[cam_idx].append(np.array(error))
                 p = plt.figure(cam_idx)
                 p.clear()
                 x = xip[:, 0, 0]
@@ -155,9 +159,10 @@ while not all_files_read:
                 print("Max error ({}, {})".format(u[max_x_idx], v[max_y_idx]))
         else:
             print("Chessboard not found")
+            distortion_error[cam_idx].append(np.zeros((nx * ny, 1, 2)))
 
         img2 = cv2.resize(img, None, fx=display_size, fy=display_size)
-        img2 = cv2.circle(img2, (img2.shape[1] >> 1, img2.shape[0] >> 1), 5, (255, 0, 0), 3)
+        img2 = cv2.circle(img2, (img2.shape[1] >> 1, img2.shape[0] >> 1), int(max_dist * display_size + 0.5), (255, 0, 0), 3)
         cv2.imshow("{}".format(setupInfo.RigInfo.module_name[cam_idx]), img2)
 
         print("")
@@ -177,15 +182,13 @@ if not use_saved_results:
     image_helper.save_np_file("distortion_find_corners", find_corners)
 
 
+distortion_error = np.array(distortion_error)
 img_shape = (setupInfo.SensorInfo.height, setupInfo.SensorInfo.width)
-n = find_corners[0].shape[0] * find_corners[0].shape[1]
-
-c = np.squeeze(np.array(find_corners[0]), axis=2).reshape(n, 2)
-e = np.squeeze(np.array(distortion_error[0]), axis=2).reshape(n, 2)
+c = np.squeeze(find_corners[0, find_ret[0]], axis=2).reshape(-1, 2)
+e = np.squeeze(distortion_error[0, find_ret[0]], axis=2).reshape(-1, 2)
 
 lens_distortion = LensDistortion()
 dist_map = lens_distortion.compute_distortion_map(img_shape, c, e)
-cv2.destroyAllWindows()
 
 step = 1
 plt.figure(10).clear()
@@ -198,107 +201,107 @@ plt.imshow(dist_map[::step, ::step, 1])
 plt.colorbar()
 plt.title('Y Error')
 
+if False:
+    use_saved_results = False
 
-use_saved_results = False
+    find_ret = []
+    find_corners = []
+    if use_saved_results:
+        # Load previous results
+        find_ret = image_helper.load_np_file("distortion_find_ret.npy")
+        find_corners = image_helper.load_np_file("distortion_find_corners.npy")
 
-find_ret = []
-find_corners = []
-if use_saved_results:
-    # Load previous results
-    find_ret = image_helper.load_np_file("distortion_find_ret.npy")
-    find_corners = image_helper.load_np_file("distortion_find_corners.npy")
-
-orientation = 0
-lens_shade_filter = []
-for cam_idx in range(image_helper.num_cam()):
-    lens_shade_filter.append(image_helper.load_np_file("lens_shading_{}.npy".format(cam_idx)))
-    if not use_saved_results:
-        find_ret.append([])
-        find_corners.append([])
-
-distortion_error = []
-all_files_read = False
-while not all_files_read:
+    orientation = 0
+    lens_shade_filter = []
     for cam_idx in range(image_helper.num_cam()):
-        if orientation == 0:
-            distortion_error.append([])
+        lens_shade_filter.append(image_helper.load_np_file("lens_shading_{}.npy".format(cam_idx)))
+        if not use_saved_results:
+            find_ret.append([])
+            find_corners.append([])
 
-        img_tmp, _ = image_helper.read_image_file(cam_idx, orientation, scale_to_8bit=False)
-        if img_tmp is None:
-            all_files_read = True
-            break
+    distortion_error = []
+    all_files_read = False
+    while not all_files_read:
+        for cam_idx in range(image_helper.num_cam()):
+            if orientation == 0:
+                distortion_error.append([])
 
-        image_normalized = (img_tmp - 64.0 * 16.0) * lens_shade_filter[cam_idx] + 64.0 * 16.0
-        image_normalized[image_normalized < 0.0] = 0.0
-        max_val = np.max(image_normalized)
-        print("max value: {}".format(max_val))
-        image_normalized = (image_normalized/max_val) * ((256*256) - 1)
-        print("Normalized max value: {}".format(np.max(image_normalized)))
+            img_tmp, _ = image_helper.read_image_file(cam_idx, orientation, scale_to_8bit=False)
+            if img_tmp is None:
+                all_files_read = True
+                break
 
-        img = np.round(image_normalized/256).astype(np.uint8)
+            image_normalized = (img_tmp - 64.0 * 16.0) * lens_shade_filter[cam_idx] + 64.0 * 16.0
+            image_normalized[image_normalized < 0.0] = 0.0
+            max_val = np.max(image_normalized)
+            print("max value: {}".format(max_val))
+            image_normalized = (image_normalized/max_val) * ((256*256) - 1)
+            print("Normalized max value: {}".format(np.max(image_normalized)))
 
-        img = lens_distortion.correct_distortion(img)
+            img = np.round(image_normalized/256).astype(np.uint8)
 
-        if use_saved_results:
-            ret = find_ret[cam_idx][orientation]
-            corners = find_corners[cam_idx][orientation]
-        else:
-            print("Searching...")
-            ret, corners = cv2.findCirclesGrid(img, (nx, ny), None)
+            img = lens_distortion.correct_distortion(img)
 
-            #ret, corners = cv2.findChessboardCornersSB(img, (nx, ny), None)
-            find_ret[cam_idx].append(ret)
-            find_corners[cam_idx].append(corners)
-
-        # Compute the distance to the center of the sensor
-        dist = []
-        if ret:
-            #corners = corners[::-1]
-            img = cv2.drawChessboardCorners(img.copy(), (nx, ny), corners, True)
-
-            obj_pts = []
-            dist = np.linalg.norm(np.squeeze(corners - center), axis=1)
-            if estimate_from_center_only and dist[dist <= max_dist].shape[0] >= 4:
-                obj_pts = objp[dist <= max_dist]
-                img_pts = corners[dist <= max_dist]
-            elif not estimate_from_center_only and len(corners) >= 4:
-                obj_pts = objp
-                img_pts = corners
+            if use_saved_results:
+                ret = find_ret[cam_idx][orientation]
+                corners = find_corners[cam_idx][orientation]
             else:
-                print("Not enough points to compute homography")
-                # sys.exit(-1)
+                print("Searching...")
+                ret, corners = cv2.findCirclesGrid(img, (nx, ny), None)
 
-            if len(obj_pts) > 0:
-                H, mask = cv2.findHomography(obj_pts, img_pts)
-                print("H {} - num points: {}".format(setupInfo.RigInfo.module_name[cam_idx], len(obj_pts)))
-                print("{}".format(H))
+                #ret, corners = cv2.findChessboardCornersSB(img, (nx, ny), None)
+                find_ret[cam_idx].append(ret)
+                find_corners[cam_idx].append(corners)
 
-                # Compute the ideal corners using homography
-                xip = cv2.convertPointsFromHomogeneous(np.matmul(H, np.squeeze(xi.copy()).T).T)
-                error = corners - xip
-                distortion_error[cam_idx].append(error)
-                p = plt.figure(cam_idx)
-                p.clear()
-                x = xip[:, 0, 0]
-                y = xip[:, 0, 1]
-                u = -1.0 * error[:, 0, 0]
-                v = -1.0 * error[:, 0, 1]
-                plt.gca().invert_yaxis()
-                plt.quiver(x, y, u, v, angles='uv', units='xy', minlength=1, scale_units='xy', scale=0.01, pivot='tip')
-                plt.draw()
+            # Compute the distance to the center of the sensor
+            dist = []
+            if ret:
+                #corners = corners[::-1]
+                img = cv2.drawChessboardCorners(img.copy(), (nx, ny), corners, True)
 
-                #p = plt.figure(10+cam_idx)
-                #p.clear()
-                #plt.gca().invert_yaxis()
-                #plt.scatter(xip[:, 0, 0], xip[::-1, 0, 1], color='k', s=1)
-                #plt.scatter(corners[:, 0, 0], corners[::-1, 0, 1], color='g', s=1)
-                #plt.draw()
+                obj_pts = []
+                dist = np.linalg.norm(np.squeeze(corners - center), axis=1)
+                if estimate_from_center_only and dist[dist <= max_dist].shape[0] >= 4:
+                    obj_pts = objp[dist <= max_dist]
+                    img_pts = corners[dist <= max_dist]
+                elif not estimate_from_center_only and len(corners) >= 4:
+                    obj_pts = objp
+                    img_pts = corners
+                else:
+                    print("Not enough points to compute homography")
+                    # sys.exit(-1)
 
-                max_x_idx = np.argmax(np.abs(u))
-                max_y_idx = np.argmax(np.abs(v))
-                print("Max error ({}, {})".format(u[max_x_idx], v[max_y_idx]))
-        else:
-            print("Chessboard not found")
+                if len(obj_pts) > 0:
+                    H, mask = cv2.findHomography(obj_pts, img_pts)
+                    print("H {} - num points: {}".format(setupInfo.RigInfo.module_name[cam_idx], len(obj_pts)))
+                    print("{}".format(H))
+
+                    # Compute the ideal corners using homography
+                    xip = cv2.convertPointsFromHomogeneous(np.matmul(H, np.squeeze(xi.copy()).T).T)
+                    error = corners - xip
+                    distortion_error[cam_idx].append(error)
+                    p = plt.figure(cam_idx)
+                    p.clear()
+                    x = xip[:, 0, 0]
+                    y = xip[:, 0, 1]
+                    u = -1.0 * error[:, 0, 0]
+                    v = -1.0 * error[:, 0, 1]
+                    plt.gca().invert_yaxis()
+                    plt.quiver(x, y, u, v, angles='uv', units='xy', minlength=1, scale_units='xy', scale=0.01, pivot='tip')
+                    plt.draw()
+
+                    #p = plt.figure(10+cam_idx)
+                    #p.clear()
+                    #plt.gca().invert_yaxis()
+                    #plt.scatter(xip[:, 0, 0], xip[::-1, 0, 1], color='k', s=1)
+                    #plt.scatter(corners[:, 0, 0], corners[::-1, 0, 1], color='g', s=1)
+                    #plt.draw()
+
+                    max_x_idx = np.argmax(np.abs(u))
+                    max_y_idx = np.argmax(np.abs(v))
+                    print("Max error ({}, {})".format(u[max_x_idx], v[max_y_idx]))
+            else:
+                print("Chessboard not found")
 
         img2 = cv2.resize(img, None, fx=display_size, fy=display_size)
         img2 = cv2.circle(img2, (img2.shape[1] >> 1, img2.shape[0] >> 1), 5, (255, 0, 0), 3)
@@ -308,7 +311,7 @@ while not all_files_read:
 
     if not all_files_read:
         plt.waitforbuttonpress(0.1)
-        key = cv2.waitKey(0)
+        key = cv2.waitKey(50)
         if key == 27:
             break
     orientation += 1
