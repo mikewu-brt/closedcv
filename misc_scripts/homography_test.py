@@ -40,7 +40,7 @@ if unknown:
 ####################
 
 estimate_from_center_only = True
-use_saved_results = False
+use_saved_results = True
 
 image_helper = Image(args.image_dir)
 display_size = image_helper.display_size(1024)
@@ -114,7 +114,7 @@ while not all_files_read:
         dist = []
         if ret:
             #corners = corners[::-1]
-            img = cv2.drawChessboardCorners(img.copy(), (nx, ny), corners, True)
+            img = cv2.drawChessboardCorners(img.copy(), (nx, ny), corners.astype(np.float32), True)
 
             obj_pts = []
             dist = np.linalg.norm(np.squeeze(corners - center), axis=1)
@@ -257,7 +257,7 @@ if False:
             dist = []
             if ret:
                 #corners = corners[::-1]
-                img = cv2.drawChessboardCorners(img.copy(), (nx, ny), corners, True)
+                img = cv2.drawChessboardCorners(img.copy(), (nx, ny), corners.astype(np.float32), True)
 
                 obj_pts = []
                 dist = np.linalg.norm(np.squeeze(corners - center), axis=1)
