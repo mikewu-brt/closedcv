@@ -63,7 +63,12 @@ class ChartInfo:
     nx = 31
     ny = 24
     size_mm = 40.0
-
+    '''
+    If using a TV for distortion computation, the following lines should be used
+    '''
+    #tv_pixel_mm = pixel_size_mm(3840, 2160, 85.6)
+    #size_mm = tv_pixel_mm * 60.0
+    #pose_info = {'nx': 5, 'ny': 5, 'dx': tv_pixel_mm * 12, 'dy': tv_pixel_mm * 12}
 
 # The following class is used for computing the focal length of each camera on the rig by using the knowledge of object distance and its image
 class CalibMagInfo:
