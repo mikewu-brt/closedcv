@@ -47,6 +47,10 @@ class LensDistortion:
     def distortion_map(self):
         return self.__dist_map
 
+    def set_distortion_map(self, distortion_map):
+        self.__dist_map = distortion_map
+        return
+
     def opencv_distortion_map(self, distortion_map=None):
         if distortion_map is None:
             distortion_map = self.__dist_map
@@ -81,8 +85,10 @@ class LensDistortion:
         # Remap image using distortion map
         return cv2.remap(img.copy(), dist_map, None, cv2.INTER_LINEAR)
 
-    def __init(self):
+    def __init__(self, distortion_map=None):
         # FIXME(Chuck)
         #  - Load distortion map from file
         #  - Load vignetting map from file
+        if distortion_map is not None:
+            self.__dist_map = distortion_map
         return
