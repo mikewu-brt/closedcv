@@ -39,7 +39,7 @@ if unknown:
 
 ####################
 
-estimate_from_center_only = True
+estimate_from_center_only = False
 use_saved_results = True
 
 image_helper = Image(args.image_dir)
@@ -69,7 +69,8 @@ if use_saved_results:
 orientation = 0
 lens_shade_filter = []
 for cam_idx in range(image_helper.num_cam()):
-    lens_shade_filter.append(image_helper.load_np_file("lens_shading_{}.npy".format(cam_idx)))
+    lens_shade_filter.append(
+        image_helper.load_np_file("lens_shading_{}.npy".format(setupInfo.RigInfo.module_name[cam_idx])))
     if not use_saved_results:
         find_ret.append([])
         find_corners.append([])
@@ -157,6 +158,7 @@ while not all_files_read:
                 max_x_idx = np.argmax(np.abs(u))
                 max_y_idx = np.argmax(np.abs(v))
                 print("Max error ({}, {})".format(u[max_x_idx], v[max_y_idx]))
+                print("Mean error ({}, {})".format(np.mean(abs(u)), np.mean(abs(v))))
         else:
             print("Chessboard not found")
             distortion_error[cam_idx].append(np.zeros((nx * ny, 1, 2)))
@@ -203,6 +205,7 @@ plt.title('Y Error')
 
 if False:
     use_saved_results = False
+    estimate_from_center_only = False
 
     find_ret = []
     find_corners = []
@@ -214,7 +217,8 @@ if False:
     orientation = 0
     lens_shade_filter = []
     for cam_idx in range(image_helper.num_cam()):
-        lens_shade_filter.append(image_helper.load_np_file("lens_shading_{}.npy".format(cam_idx)))
+        lens_shade_filter.append(
+              image_helper.load_np_file("lens_shading_{}.npy".format(setupInfo.RigInfo.module_name[cam_idx])))        
         if not use_saved_results:
             find_ret.append([])
             find_corners.append([])
@@ -300,6 +304,7 @@ if False:
                     max_x_idx = np.argmax(np.abs(u))
                     max_y_idx = np.argmax(np.abs(v))
                     print("Max error ({}, {})".format(u[max_x_idx], v[max_y_idx]))
+                    print("Mean error ({}, {})".format(np.mean(abs(u)), np.mean(abs(v))))
             else:
                 print("Chessboard not found")
 
@@ -309,9 +314,9 @@ if False:
 
         print("")
 
-    if not all_files_read:
-        plt.waitforbuttonpress(0.1)
-        key = cv2.waitKey(50)
-        if key == 27:
-            break
-    orientation += 1
+        if not all_files_read:
+            plt.waitforbuttonpress(0.1)
+            key = cv2.waitKey(50)
+            if key == 27:
+                break
+        orientation += 1
