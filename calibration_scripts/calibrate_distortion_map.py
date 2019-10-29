@@ -26,7 +26,7 @@ import matplotlib.pyplot as plt
 
 parser = argparse.ArgumentParser(description="Homography Test")
 parser.add_argument('--image_dir', default='tv_86in_circlegrid_oct18')
-parser.add_argument('--use_distortion_from', default="")
+parser.add_argument('--use_distortion_from', default=None)
 
 args, unknown = parser.parse_known_args()
 if unknown:
@@ -56,7 +56,7 @@ plt.figure(0)
 orientation = 0
 lens_shade_filter = image_helper.load_np_file("lens_shading_0.npy")
 
-if args.use_distortion_from == "":
+if args.use_distortion_from is None:
     # Search for corners
     all_files_read = False
     find_ret = []
@@ -192,6 +192,8 @@ if args.use_distortion_from == "":
             max_x_idx = np.argmax(np.abs(u))
             max_y_idx = np.argmax(np.abs(v))
             print("Orientation {}, Max error ({}, {})".format(orientation, u[max_x_idx], v[max_y_idx]))
+        else:
+            distortion_error.append(np.zeros((nx * ny, 1, 2)))
 
         pose_x += 1
         if pose_x >= setupInfo.ChartInfo.pose_info['nx']:
@@ -217,17 +219,20 @@ if args.use_distortion_from == "":
     plt.imshow(dist_map[::step, ::step, 0])
     plt.colorbar()
     plt.title('X Error')
+    plt.draw()
 
     plt.figure(11).clear()
     plt.imshow(dist_map[::step, ::step, 1])
     plt.colorbar()
     plt.title('Y Error')
+    plt.draw()
+
+    plt.waitforbuttonpress(0.1)
+    cv2.waitKey(50)
 else:
     print("")
     print("Using distortion map from: {}".format(args.use_distortion_from))
-    file_helper = Image(args.use_distortion_from)
-    dist_map = file_helper.load_np_file("distortion_map.npy")
-    lens_distortion = LensDistortion(dist_map)
+    lens_distortion = LensDistortion(args.use_distortion_from)
 
 if False:
     estimate_from_center_only = False

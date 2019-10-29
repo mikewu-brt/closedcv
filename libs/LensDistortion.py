@@ -13,6 +13,7 @@
 import sys
 import cv2
 import numpy as np
+from libs.Image import Image
 import scipy
 from scipy import interpolate
 
@@ -85,10 +86,10 @@ class LensDistortion:
         # Remap image using distortion map
         return cv2.remap(img.copy(), dist_map, None, cv2.INTER_LINEAR)
 
-    def __init__(self, distortion_map=None):
+    def __init__(self, distortion_dir=None):
         # FIXME(Chuck)
-        #  - Load distortion map from file
         #  - Load vignetting map from file
-        if distortion_map is not None:
-            self.__dist_map = distortion_map
+        if distortion_dir is not None:
+            file_helper = Image(distortion_dir)
+            self.__dist_map = file_helper.load_np_file("distortion_map.npy")
         return
