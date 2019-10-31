@@ -32,6 +32,7 @@ import matplotlib.pyplot as plt
 
 parser = argparse.ArgumentParser(description="Homography Test")
 parser.add_argument('--image_dir', default='tv_86in_circlegrid_oct18')
+parser.add_argument('--cal_dir', default='tv_86in_circlegrid_oct18')
 
 args, unknown = parser.parse_known_args()
 if unknown:
@@ -39,8 +40,8 @@ if unknown:
 
 ####################
 
-estimate_from_center_only = False
-use_saved_results = True
+estimate_from_center_only = True
+use_saved_results = False
 
 image_helper = Image(args.image_dir)
 display_size = image_helper.display_size(1024)
@@ -67,10 +68,9 @@ if use_saved_results:
     find_corners = image_helper.load_np_file("distortion_find_corners.npy")
 
 orientation = 0
-lens_shade_filter = []
+lens_distortion = []
 for cam_idx in range(image_helper.num_cam()):
-    lens_shade_filter.append(
-        image_helper.load_np_file("lens_shading_{}.npy".format(setupInfo.RigInfo.module_name[cam_idx])))
+    lens_distortion.append(LensDistortion(cam_idx, None, args.cal_dir))
     if not use_saved_results:
         find_ret.append([])
         find_corners.append([])
@@ -87,14 +87,7 @@ while not all_files_read:
             all_files_read = True
             break
 
-        image_normalized = (img_tmp - 64.0 * 16.0) * lens_shade_filter[cam_idx] + 64.0 * 16.0
-        image_normalized[image_normalized < 0.0] = 0.0
-        max_val = np.max(image_normalized)
-        print("max value: {}".format(max_val))
-        image_normalized = (image_normalized/max_val) * ((256*256) - 1)
-        print("Normalized max value: {}".format(np.max(image_normalized)))
-
-        img = np.round(image_normalized/256).astype(np.uint8)
+        img = lens_distortion[cam_idx].correct_vignetting(img_tmp, None,apply_flag=True, alpha=0.7, scale_to_8bit=True)
 
         if use_saved_results:
             ret = find_ret[cam_idx][orientation]

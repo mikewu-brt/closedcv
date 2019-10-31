@@ -22,6 +22,7 @@ class LensDistortion:
 
     __dist_map = None
     __vignetting_map = None
+    __lens_shade_filter = None
 
     def compute_distortion_map(self, image_shape, corners, distortion_error, step=1):
         dist_map = np.zeros((image_shape[0], image_shape[1], 2), dtype=np.float32)
@@ -86,10 +87,28 @@ class LensDistortion:
         # Remap image using distortion map
         return cv2.remap(img.copy(), dist_map, None, cv2.INTER_LINEAR)
 
-    def __init__(self, distortion_dir=None):
+    def correct_vignetting(self, img, lens_shade_filter=None, apply_flag=True, alpha=0.9, max_limit=65535, scale_to_8bit=False):
+        if apply_flag is True:
+            if lens_shade_filter is None:
+                lens_shade_filter = self.__lens_shade_filter
+            image_normalized = img * lens_shade_filter * alpha
+            max_val = np.max(image_normalized)
+            print("max value: {}".format(max_val))
+            image_normalized[image_normalized > max_limit] = max_limit
+            print("Normalized max value: {}".format(np.max(image_normalized)))
+            img = image_normalized.astype(np.uint16)
+        if scale_to_8bit is True:
+            img = (img>>8).astype(np.uint8)
+        return img
+
+    def __init__(self, lens_idx=0, distortion_dir=None, vignetting_dir=None):
         # FIXME(Chuck)
         #  - Load vignetting map from file
         if distortion_dir is not None:
             file_helper = Image(distortion_dir)
             self.__dist_map = file_helper.load_np_file("distortion_map.npy")
+        if vignetting_dir is not None:
+            file_helper = Image(vignetting_dir)
+            setupInfo = file_helper.setup_info()
+            self.__lens_shade_filter = file_helper.load_np_file("lens_shading_{}.npy".format(setupInfo.RigInfo.module_name[lens_idx]))
         return

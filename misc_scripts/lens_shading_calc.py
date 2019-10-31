@@ -62,7 +62,7 @@ while not all_files_read:
             max_val_vec = np.max(img,axis=(0,1))
             img_new = (1/img) * max_val_vec
 
-        cal_file_helper.save_np_file("lens_shading_{}".format(cam_idx), img_new)
+        cal_file_helper.save_np_file("lens_shading_{}".format(setupInfo.RigInfo.module_name[cam_idx]), img_new)
 
         img2 = cv2.resize(img, None, fx=display_size, fy=display_size)
         cv2.imshow("{}".format(setupInfo.RigInfo.module_name[cam_idx]), img2)

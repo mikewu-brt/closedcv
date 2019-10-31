@@ -107,8 +107,11 @@ def compute_magnification(args=None, delta_shift=0):
                     max_focal_length[k, cam_idx] = max(fx[k, cam_idx] / pixel_size, fy[k, cam_idx] / pixel_size)
                     #print("avg_focal_length:", cam_idx)
                     #print(avg_focal_length[k, cam_idx])
-            else:
-                print("Chessboard not found")
+                else:
+                    print("Chessboard not found")
+                    print("ERROR: Chessboard Not detected for all Cameras, Results are Invalid!!!")
+                    all_files_read = True
+                    break
 
             if img is None:
                 all_files_read = True
@@ -126,6 +129,8 @@ def compute_magnification(args=None, delta_shift=0):
     #print(obj_dist)
     print("avg_focal_length:")
     print(avg_focal_length)
+    print("Mean:")
+    print(np.mean(avg_focal_length, axis=0))
     distance_to_pupil = compute_entrance_to_pupil_adjustment_val(mag_x, mag_y, obj_dist)
     return (distance_to_pupil);
 

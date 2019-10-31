@@ -24,8 +24,9 @@ import matplotlib.pyplot as plt
 # Input Parameters
 ####################
 
-parser = argparse.ArgumentParser(description="Homography Test")
+parser = argparse.ArgumentParser(description="Generate Distortion Map")
 parser.add_argument('--image_dir', default='tv_86in_circlegrid_oct18')
+parser.add_argument('--cal_dir', default='tv_86in_circlegrid_oct18')
 parser.add_argument('--use_distortion_from', default=None)
 
 args, unknown = parser.parse_known_args()
@@ -35,7 +36,7 @@ if unknown:
 ####################
 
 estimate_from_center_only = False
-use_saved_results = True
+use_saved_results = False
 
 image_helper = Image(args.image_dir)
 display_size = image_helper.display_size(1024)
@@ -54,7 +55,10 @@ objp[:, :2] = np.mgrid[0:nx, 0:ny].T.reshape(-1, 2) * (checker_size_mm * 1.0e-3)
 plt.figure(0)
 
 orientation = 0
-lens_shade_filter = image_helper.load_np_file("lens_shading_0.npy")
+
+# instantiate lenDistortion
+lens_distortion = LensDistortion(0, None, args.cal_dir)
+
 
 if args.use_distortion_from is None:
     # Search for corners
@@ -68,13 +72,7 @@ if args.use_distortion_from is None:
             all_files_read = True
             break
 
-        image_normalized = (img_tmp - 64.0 * 16.0) * lens_shade_filter + 64.0 * 16.0
-        image_normalized[image_normalized < 0.0] = 0.0
-        max_val = np.max(image_normalized)
-        print("max value: {}".format(max_val))
-        image_normalized = (image_normalized/max_val) * ((256*256) - 1)
-        print("Normalized max value: {}".format(np.max(image_normalized)))
-        img = np.round(image_normalized / 256).astype(np.uint8)
+        img = lens_distortion.correct_vignetting(img_tmp, None,apply_flag=True, alpha=0.7, scale_to_8bit=True)
 
         print("Searching...")
         ret, corners = cv2.findCirclesGrid(img, (nx, ny), None)

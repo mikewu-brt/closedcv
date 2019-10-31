@@ -17,6 +17,7 @@ import importlib
 import argparse
 from libs.Image import *
 from libs.CalibrationInfo import *
+from libs.LensDistortion import *
 import matplotlib as matplot
 matplot.use('TkAgg')
 import matplotlib.pyplot as plt
@@ -71,6 +72,11 @@ display_size = image_helper.display_size(1024)
 
 num_cam = image_helper.num_cam()
 
+# instantiate lenDistortion
+lens_distortion = []
+for cam_idx in range(num_cam):
+    lens_distortion.append(LensDistortion(cam_idx, None, args.cal_dir))
+
 # Open a figure to avoid cv2.imshow crash
 plt.figure(1)
 
@@ -95,10 +101,13 @@ if process_image_files:
         chessboard_found = True
         # Load images
         for cam_idx in range(num_cam):
-            img, gray = image_helper.read_image_file(cam_idx, orientation)
-            if img is None:
+            img_tmp, gray_tmp = image_helper.read_image_file(cam_idx, orientation, scale_to_8bit=False)
+            if img_tmp is None:
                 all_files_read = True
                 break
+
+            img = lens_distortion[cam_idx].correct_vignetting(img_tmp, None,apply_flag=True, alpha=0.7, scale_to_8bit=True)
+            gray = lens_distortion[cam_idx].correct_vignetting(gray_tmp, None,apply_flag=True, alpha=0.7, scale_to_8bit=True)
 
             print("Searching")
             if use_2step_findchessboard:
