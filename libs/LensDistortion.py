@@ -16,6 +16,7 @@ import numpy as np
 from libs.Image import Image
 import scipy
 from scipy import interpolate
+import matplotlib.pyplot as plt
 
 
 class LensDistortion:
@@ -100,6 +101,32 @@ class LensDistortion:
         if scale_to_8bit is True:
             img = (img>>8).astype(np.uint8)
         return img
+
+    def correct_distortion_points(self, pts):
+        m, n, _ = self.__dist_map.shape
+        x = np.arange(n)
+        y = np.arange(m)
+        new_pts = np.empty(pts.shape)
+        in_values = np.vstack((pts[:, 0, 1], pts[:, 0, 0])).T
+
+        f = scipy.interpolate.RegularGridInterpolator((y, x), self.__dist_map[:, :, 0], method='linear')
+        new_pts[:, 0, 0] = pts[:, 0, 0] - f(in_values)
+
+        f = scipy.interpolate.RegularGridInterpolator((y, x), self.__dist_map[:, :, 1], method='linear')
+        new_pts[:, 0, 1] = pts[:, 0, 1] - f(in_values)
+        return new_pts
+
+    def plot_distortion_map(self, figure_num=None, decimation=128):
+        m, n, _ = self.__dist_map.shape
+        x = np.arange(0, n, decimation)
+        y = np.arange(0, m, decimation)
+        u = -1.0 * self.__dist_map[::decimation, ::decimation, 0]
+        v = -1.0 * self.__dist_map[::decimation, ::decimation, 1]
+        if figure_num is not None:
+            plt.figure(figure_num).clear()
+        plt.gca().invert_yaxis()
+        plt.quiver(x, y, u, v, angles='uv', units='xy', minlength=1, scale_units='xy', scale=0.01, pivot='tip')
+        plt.draw()
 
     def __init__(self, lens_idx=0, distortion_dir=None, vignetting_dir=None):
         # FIXME(Chuck)
