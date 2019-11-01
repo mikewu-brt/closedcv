@@ -26,6 +26,7 @@ import matplotlib.pyplot as plt
 
 parser = argparse.ArgumentParser(description="Homography Test")
 parser.add_argument('--image_dir', default='tv_86in_circlegrid_oct18')
+parser.add_argument('--cal_dir', default=None)
 parser.add_argument('--use_distortion_from', default=None)
 
 args, unknown = parser.parse_known_args()
@@ -45,14 +46,15 @@ max_dist = setupInfo.SensorInfo.width * 1.0 / 1.0
 
 plt.figure(0)
 
-lens_shade_filter = image_helper.load_np_file("lens_shading_0.npy")
-lens_distortion = LensDistortion(0, args.use_distortion_from, None)
 if args.use_distortion_from is not None:
+    lens_distortion = LensDistortion(0, args.use_distortion_from, args.cal_dir)
     print("")
     print("Using distortion map from: {}".format(args.use_distortion_from))
     lens_distortion.plot_distortion_map(30, 64)
     plt.title("Lens Distortion Map")
     plt.draw()
+else:
+    lens_distortion = LensDistortion(0, args.cal_dir, args.cal_dir)
 
 # Search for corners
 find_ret = []
@@ -75,10 +77,7 @@ while not use_saved_results and group < len(setupInfo.ChartInfo.pose_info):
         print("Error - Exiting early, no more files to read")
         break
 
-    image_normalized = img_tmp * lens_shade_filter * 0.7
-    image_normalized[image_normalized < 0.0] = 0.0
-    image_normalized[image_normalized > 65535.0] = 65535.0
-    img = (image_normalized / 256).astype(np.uint8)
+    img = lens_distortion.correct_vignetting(img_tmp, alpha=0.7, scale_to_8bit=True)
 
     print("Searching...")
     ret, corners = cv2.findCirclesGrid(img, (nx, ny), None)
@@ -281,7 +280,8 @@ if args.use_distortion_from is None:
     print("")
     print("Saving distortion map")
     print("")
-    image_helper.save_np_file("distortion_map", dist_map[-1])
+    cal_helper = Image(args.cal_dir)
+    cal_helper.save_np_file("distortion_map_{}".format(setupInfo.RigInfo.module_name[0]), dist_map[-1])
 
 
     step = 1
