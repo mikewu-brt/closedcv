@@ -63,18 +63,28 @@ dx1 = dx1[0::decimate, 0::decimate]
 dy1 = dy1[0::decimate, 0::decimate]
 dx2 = dx2[0::decimate, 0::decimate]
 dy2 = dy2[0::decimate, 0::decimate]
-x, y = np.meshgrid(np.arange(0, nx, decimate), -np.arange(0, ny, decimate))
+x, y = np.meshgrid(np.arange(0, nx, decimate), np.arange(0, ny, decimate))
 
 
 
 plt.figure(1).clear()
-scale = 20.0  # Quiver lines are "scale" times larger
+plt.gca().invert_yaxis()
 C = np.hypot(dx1, dy1)
-plt.quiver(x, y, dx1, dy1, C, pivot='tip', angles='xy', scale_units='xy', scale=1.0/scale, minlength=0)
+qscale = 4.0
+q = plt.quiver(x, y, -dx1, dy1, C, angles='uv', units='inches', minlength=0, scale_units='inches', scale=qscale, pivot='tip')
+plt.quiverkey(q, 0.9, 0.9, qscale / 4, "${:0.1f} pixels$".format(qscale / 4), labelpos='E', coordinates='figure')
 plt.title("Distortion - Reference")
+
+plt.figure(3).clear()
+plt.gca().invert_yaxis()
+plt.scatter(x, y)
+plt.scatter(mapx1[::decimate, ::decimate], mapy1[::decimate, ::decimate])
+plt.legend(["(x, y)", "(mapx1, mapy1)"])
 
 
 plt.figure(2).clear()
+plt.gca().invert_yaxis()
 C = np.hypot(dx2, dy2)
-plt.quiver(x, y, dx2, dy2, C, pivot='tip', angles='xy', scale_units='xy', scale=1.0/scale, minlength=0)
+q = plt.quiver(x, y, -dx2, dy2, C, angles='uv', units='inches', minlength=0, scale_units='inches', scale=qscale, pivot='tip')
+plt.quiverkey(q, 0.9, 0.9, qscale / 4, "${:0.1f} pixels$".format(qscale / 4), labelpos='E', coordinates='figure')
 plt.title("Distortion - Source")

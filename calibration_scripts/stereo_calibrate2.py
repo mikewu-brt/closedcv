@@ -14,6 +14,7 @@ import cv2
 import numpy as np
 import os
 import importlib
+import math
 import argparse
 from libs.Image import *
 from libs.CalibrationInfo import *
@@ -31,6 +32,7 @@ parser = argparse.ArgumentParser(description="Stereo Calibrate 2")
 parser.add_argument('--image_dir', default='Oct2_cal')
 parser.add_argument('--cal_dir', default='Oct2_cal')
 parser.add_argument('--fix_focal_length', action="store_true", default=False, help='use this option if the focal length is to be determined explicitly and then set to that value')
+parser.add_argument('--distortion_map', action="store_true", default=False, help='Use distortion map')
 
 args, unknown = parser.parse_known_args()
 if unknown:
@@ -61,10 +63,19 @@ criteria = (cv2.TERM_CRITERIA_EPS + cv2.TERM_CRITERIA_MAX_ITER, 30, 0.001)
 # Misc control
 show_images = True
 process_image_files = True
-use_rgb_image = True
 force_fx_eq_fy = True
-estimate_distortion = True
 use_2step_findchessboard = False
+
+print("")
+print("Script Options:")
+print("  show_images: {}".format(show_images))
+print("  process_image_files: {}".format(process_image_files))
+print("  force_fx_eq_fy: {}".format(force_fx_eq_fy))
+print("  use_2step_findchessboard: {}".format(use_2step_findchessboard))
+print("")
+print("Command line options:")
+print("  {}".format(args))
+print("")
 
 display_size = image_helper.display_size(1024)
 
@@ -75,7 +86,7 @@ num_cam = image_helper.num_cam()
 # instantiate lenDistortion
 lens_distortion = []
 for cam_idx in range(num_cam):
-    lens_distortion.append(LensDistortion(cam_idx, None, args.cal_dir))
+    lens_distortion.append(LensDistortion(cam_idx, args.cal_dir, args.cal_dir))
 
 # Open a figure to avoid cv2.imshow crash
 plt.figure(1)
@@ -106,20 +117,18 @@ if process_image_files:
                 all_files_read = True
                 break
 
-            img = lens_distortion[cam_idx].correct_vignetting(img_tmp, None,apply_flag=True, alpha=0.7, scale_to_8bit=True)
-            gray = lens_distortion[cam_idx].correct_vignetting(gray_tmp, None,apply_flag=True, alpha=0.7, scale_to_8bit=True)
+            img = lens_distortion[cam_idx].correct_vignetting(img_tmp, None, apply_flag=True, alpha=0.7, scale_to_8bit=True)
+            gray = lens_distortion[cam_idx].correct_vignetting(gray_tmp, None, apply_flag=True, alpha=0.7, scale_to_8bit=True)
+
+            if args.distortion_map:
+                img = lens_distortion[cam_idx].correct_distortion(img)
+                gray = lens_distortion[cam_idx].correct_distortion(gray)
 
             print("Searching")
             if use_2step_findchessboard:
-                if use_rgb_image:
-                    ret, corners = cv2.findChessboardCorners(img, (nx, ny), None)
-                else:
-                    ret, corners = cv2.findChessboardCorners(gray, (nx, ny), None)
+                ret, corners = cv2.findChessboardCorners(img, (nx, ny), None)
             else:
-                if use_rgb_image:
-                    ret, corners = cv2.findChessboardCornersSB(img, (nx, ny), None)
-                else:
-                    ret, corners = cv2.findChessboardCornersSB(gray, (nx, ny), None)
+                ret, corners = cv2.findChessboardCornersSB(img, (nx, ny), None)
 
             if ret:
                 print("Chessboard Found")
@@ -182,7 +191,7 @@ i_flags |= cv2.CALIB_FIX_K3
 # i_flags |= cv2.CALIB_RATIONAL_MODEL
 # i_flags |= cv2.CALIB_THIN_PRISM_MODEL
 
-if not estimate_distortion:
+if args.distortion_map:
     i_flags |= cv2.CALIB_ZERO_TANGENT_DIST
     i_flags |= cv2.CALIB_FIX_K1
     i_flags |= cv2.CALIB_FIX_K2
@@ -322,10 +331,11 @@ for cam_idx in range(num_cam):
         print(R1)
 
         A, J = cv2.Rodrigues(R1)
-        A *= 180.0 / 3.14159
+        theta = np.linalg.norm(A)
+        Raxis = A / theta
         print("")
         print("Rotation Vector (deg):")
-        print(A)
+        print("Angle: {}, Rotation Axis: {}".format(theta * 180.0/math.pi, Raxis.T))
 
         print("")
         print("Translation Matrix:")

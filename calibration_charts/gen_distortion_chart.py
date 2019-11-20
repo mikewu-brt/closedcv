@@ -28,6 +28,7 @@ parser.add_argument('--size', default=60, type=int, help="Checkerboard size (or 
 parser.add_argument('--shift', default=12, type=int, help="Pixel shift per display")
 parser.add_argument('--offset_x', default=0, type=int, help="Start x offset")
 parser.add_argument('--offset_y', default=0, type=int, help="Start y offset")
+parser.add_argument('--circle_radius_ratio', default=4.0, type=float, help="Checkerboard size to circle radius ratio")
 parser.add_argument('--vignetting', action="store_true", default=False,
                     help='Displays blank screen for vignetting estimation.')
 
@@ -72,7 +73,8 @@ cv2.imshow("Tmp", img)
 
 ck = Checkerboard(canvas_size_px=(tv_width, tv_height),
                   num_checkerboards=(args.num_x, args.num_y),
-                  checker_size_px=(args.size, args.size))
+                  checker_size_px=(args.size, args.size),
+                  circle_radius_ratio=args.circle_radius_ratio)
 
 pixel_size = pixel_size_mm(tv_width, tv_height, diag)
 checker_width, checker_height = ck.get_checker_size()

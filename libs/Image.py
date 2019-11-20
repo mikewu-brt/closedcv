@@ -118,7 +118,13 @@ class Image:
         return img, gray
 
     def load_np_file(self, filename):
-        return np.load(os.path.join(self.__directory, filename))
+        fname = os.path.join(self.__directory, filename)
+        if not os.path.exists(fname):
+            print("")
+            print("Unable to open file: {}".format(fname))
+            print("")
+            return None
+        return np.load(fname)
 
     def save_np_file(self, filename, array):
         np.save(os.path.join(self.__directory, filename), array)

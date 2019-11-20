@@ -13,6 +13,7 @@
 import cv2
 import numpy as np
 import argparse
+import math
 from libs.Image import *
 from libs.LensDistortion import *
 import matplotlib as matplot
@@ -53,6 +54,7 @@ parser = argparse.ArgumentParser(description="Calibration Distortion Map Group")
 parser.add_argument('--image_dir', default='A1_distortion_oct24_01')
 parser.add_argument('--cal_dir', default='A1_distortion_oct24_01')
 parser.add_argument('--use_distortion_from', default=None)
+parser.add_argument('--radius', type=float, default=1.0 / 16.0)
 
 args, unknown = parser.parse_known_args()
 if unknown:
@@ -67,7 +69,7 @@ display_size = image_helper.display_size(1024)
 setupInfo = image_helper.setup_info()
 
 center = np.array([setupInfo.SensorInfo.width * 0.5, setupInfo.SensorInfo.height * 0.5])
-max_dist = setupInfo.SensorInfo.width * 1.0 / 16.0
+max_dist = setupInfo.SensorInfo.width * 1.0 * args.radius
 
 filter_edge_percentage = 10.0
 
@@ -81,7 +83,7 @@ if args.use_distortion_from is not None:
     plt.title("Lens Distortion Map")
     plt.draw()
 else:
-    lens_distortion = LensDistortion(0, args.cal_dir, args.cal_dir)
+    lens_distortion = LensDistortion(0, None, args.cal_dir)
 
 # Search for corners
 find_ret = []
@@ -106,8 +108,14 @@ while not use_saved_results and group < len(setupInfo.ChartInfo.pose_info):
 
     img = lens_distortion.correct_vignetting(img_tmp, alpha=0.7, scale_to_8bit=True)
 
-    print("Searching...")
-    ret, corners = cv2.findCirclesGrid(img, (nx, ny), None)
+    if setupInfo.ChartInfo.name == "Chessboard":
+        print("Searching Chessboard...")
+        ret, corners = cv2.findChessboardCornersSB(img, (nx, ny), None)
+        if ret:
+            corners = corners[::-1]
+    else:
+        print("Searching Circles...")
+        ret, corners = cv2.findCirclesGrid(img, (nx, ny), None)
 
     # ret, corners = cv2.findChessboardCornersSB(img, (nx, ny), None)
     find_ret[group].append(ret)
@@ -238,17 +246,27 @@ for group in range(len(find_ret)):
             if args.use_distortion_from is not None:
                 corners = lens_distortion.correct_distortion_points(corners)
 
-            error = corners - xip
+            plt.figure(20+group).clear()
+            plt.gca().invert_yaxis()
+            plt.scatter(xip[:, 0, 0], xip[:, 0, 1])
+            plt.scatter(corners[:, 0, 0], corners[:, 0, 1])
+            plt.legend(["xip", "corners"])
+            plt.draw()
+
+            error = xip - corners
             distortion_error[group].append(np.array(error))
             distortion_xip[group].append(np.array(xip))
             p = plt.figure(group)
             p.clear()
             x = xip[:, 0, 0]
             y = xip[:, 0, 1]
-            u = -1.0 * error[:, 0, 0]
-            v = -1.0 * error[:, 0, 1]
+            u = error[:, 0, 0]
+            v = error[:, 0, 1]
             plt.gca().invert_yaxis()
-            plt.quiver(x, y, u, v, angles='uv', units='xy', minlength=1, scale_units='xy', scale=0.01, pivot='tip')
+            qscale = 4.0
+            C = np.hypot(u, -v)
+            q = plt.quiver(x, y, u, -v, C, angles='uv', units='inches', minlength=1, scale_units='inches', scale=qscale, pivot='tip')
+            plt.quiverkey(q, 0.9, 0.9, qscale / 4, "${:0.1f} pixels$".format(qscale / 4), labelpos='E', coordinates='figure')
             plt.title("Distortion error for group {}, pose {}, {}".format(group, pose_x, pose_y))
             plt.draw()
 

@@ -28,6 +28,7 @@ class Checkerboard:
     __checker_height = 160
     __nx = 5
     __ny = 4
+    __radius_ratio = 4.0
 
     # Methods
     @staticmethod
@@ -59,7 +60,8 @@ class Checkerboard:
         elif chart == Checkerboard.CIRCLE:
             for y in range(ys, ys + self.__ny * self.__checker_height, self.__checker_height):
                 for x in range(xs, xs + self.__nx * self.__checker_width, self.__checker_width):
-                    cv2.circle(img, (x, y), int(self.__checker_width / 4), color=color, thickness=cv2.FILLED)
+                    cv2.circle(img, (x, y), int(self.__checker_width / self.__radius_ratio),
+                               color=color, thickness=cv2.FILLED)
         else:
             print("Unknown chart type")
             sys.exit(-1)
@@ -90,7 +92,14 @@ class Checkerboard:
         self.__ny = int(ny)
         return
 
-    def __init__(self, canvas_size_px=None, checker_size_px=None, num_checkerboards=None):
+    def get_circle_radius_ratio(self):
+        return self.__radius_ratio
+
+    def set_circle_radius_ratio(self, ratio):
+        self.__radius_ratio = ratio
+        return
+
+    def __init__(self, canvas_size_px=None, checker_size_px=None, num_checkerboards=None, circle_radius_ratio=4.0):
         if canvas_size_px is not None:
             self.set_canvas_size(canvas_size_px[0], canvas_size_px[1])
 
@@ -99,4 +108,6 @@ class Checkerboard:
 
         if num_checkerboards is not None:
             self.set_number_checkers(num_checkerboards[0], num_checkerboards[1])
+
+        self.set_circle_radius_ratio(circle_radius_ratio)
         return

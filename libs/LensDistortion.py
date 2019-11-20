@@ -25,25 +25,30 @@ class LensDistortion:
     __vignetting_map = None
     __lens_shade_filter = None
 
-    def compute_distortion_map(self, image_shape, corners, distortion_error, step=1):
+    def compute_distortion_map(self, image_shape, corners, distortion_error, step=1, extrapolate=True):
         dist_map = np.zeros((image_shape[0], image_shape[1], 2), dtype=np.float32)
         grid_x, grid_y = np.mgrid[0:image_shape[1]:step, 0:image_shape[0]:step]
+        if extrapolate:
+            fval = -999
+        else:
+            fval = 0
         dist_map[::step, ::step, 0] = scipy.interpolate.griddata((corners[:, 0], corners[:, 1]), distortion_error[:, 0],
-                                                                 (grid_x, grid_y), method='linear', fill_value=-999).T
+                                                                 (grid_x, grid_y), method='linear', fill_value=fval).T
         dist_map[::step, ::step, 1] = scipy.interpolate.griddata((corners[:, 0], corners[:, 1]), distortion_error[:, 1],
-                                                                 (grid_x, grid_y), method='linear', fill_value=-999).T
+                                                                 (grid_x, grid_y), method='linear', fill_value=fval).T
 
-        grid_x1 = grid_x[dist_map[grid_y, grid_x, 0] == -999]
-        grid_y1 = grid_y[dist_map[grid_y, grid_x, 0] == -999]
-        dist_map[grid_y1, grid_x1, 0] = scipy.interpolate.griddata((corners[:, 0], corners[:, 1]),
-                                                                   distortion_error[:, 0], (grid_x1, grid_y1),
-                                                                   method='nearest').T
+        if extrapolate:
+            grid_x1 = grid_x[dist_map[grid_y, grid_x, 0] == fval]
+            grid_y1 = grid_y[dist_map[grid_y, grid_x, 0] == fval]
+            dist_map[grid_y1, grid_x1, 0] = scipy.interpolate.griddata((corners[:, 0], corners[:, 1]),
+                                                                       distortion_error[:, 0], (grid_x1, grid_y1),
+                                                                       method='nearest').T
 
-        grid_x2 = grid_x[dist_map[grid_y, grid_x, 1] == -999]
-        grid_y2 = grid_y[dist_map[grid_y, grid_x, 1] == -999]
-        dist_map[grid_y2, grid_x2, 1] = scipy.interpolate.griddata((corners[:, 0], corners[:, 1]),
-                                                                   distortion_error[:, 1], (grid_x2, grid_y2),
-                                                                   method='nearest').T
+            grid_x2 = grid_x[dist_map[grid_y, grid_x, 1] == fval]
+            grid_y2 = grid_y[dist_map[grid_y, grid_x, 1] == fval]
+            dist_map[grid_y2, grid_x2, 1] = scipy.interpolate.griddata((corners[:, 0], corners[:, 1]),
+                                                                       distortion_error[:, 1], (grid_x2, grid_y2),
+                                                                       method='nearest').T
         self.__dist_map = dist_map
         return self.__dist_map
 
@@ -63,8 +68,8 @@ class LensDistortion:
             sys.exit(-1)
 
         dist_map = distortion_map.copy()
-        dist_map[:, :, 0] = np.add(np.arange(dist_map.shape[1]), dist_map[:, :, 0])
-        dist_map[:, :, 1] = np.add(np.arange(dist_map.shape[0]).T, dist_map[:, :, 1].T).T
+        dist_map[:, :, 0] = np.add(np.arange(dist_map.shape[1]), -dist_map[:, :, 0])
+        dist_map[:, :, 1] = np.add(np.arange(dist_map.shape[0]).T, -dist_map[:, :, 1].T).T
         return dist_map
 
     def correct_distortion(self, img, distortion_map=None, K=None, D=None):
@@ -93,6 +98,8 @@ class LensDistortion:
             lens_shade_filter = self.__lens_shade_filter
 
         if apply_flag and lens_shade_filter is not None:
+            if np.ndim(img) == 2:
+                lens_shade_filter = lens_shade_filter[:, :, 0]
             image_normalized = img * lens_shade_filter * alpha
             max_val = np.max(image_normalized)
             print("max value: {}".format(max_val))
@@ -112,22 +119,25 @@ class LensDistortion:
         in_values = np.vstack((pts[:, 0, 1], pts[:, 0, 0])).T
 
         f = scipy.interpolate.RegularGridInterpolator((y, x), self.__dist_map[:, :, 0], method='linear')
-        new_pts[:, 0, 0] = pts[:, 0, 0] - f(in_values)
+        new_pts[:, 0, 0] = pts[:, 0, 0] + f(in_values)
 
         f = scipy.interpolate.RegularGridInterpolator((y, x), self.__dist_map[:, :, 1], method='linear')
-        new_pts[:, 0, 1] = pts[:, 0, 1] - f(in_values)
+        new_pts[:, 0, 1] = pts[:, 0, 1] + f(in_values)
         return new_pts
 
     def plot_distortion_map(self, figure_num=None, decimation=128):
         m, n, _ = self.__dist_map.shape
         x = np.arange(0, n, decimation)
         y = np.arange(0, m, decimation)
-        u = -1.0 * self.__dist_map[::decimation, ::decimation, 0]
-        v = -1.0 * self.__dist_map[::decimation, ::decimation, 1]
+        u = self.__dist_map[::decimation, ::decimation, 0]
+        v = self.__dist_map[::decimation, ::decimation, 1]
         if figure_num is not None:
             plt.figure(figure_num).clear()
         plt.gca().invert_yaxis()
-        plt.quiver(x, y, u, v, angles='uv', units='xy', minlength=1, scale_units='xy', scale=0.01, pivot='tip')
+        qscale = 4.0
+        C = np.hypot(u, -v)
+        q = plt.quiver(x, y, u, -v, C, angles='uv', units='inches', minlength=1, scale_units='inches', scale=qscale, pivot='tip')
+        plt.quiverkey(q, 0.9, 0.9, qscale / 4, "${:0.1f} pixels$".format(qscale / 4), labelpos='E', coordinates='figure')
         plt.draw()
 
     def __init__(self, lens_idx=0, distortion_dir=None, vignetting_dir=None):
