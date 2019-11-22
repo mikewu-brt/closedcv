@@ -15,6 +15,7 @@
 import argparse
 from libs.Stereo import *
 from libs.Image import *
+from libs.LensDistortion import *
 import importlib
 import matplotlib as matplot
 matplot.use('TkAgg')
@@ -54,9 +55,11 @@ all_files_read = False
 
 ref_pts = []
 src_pts = []
+lens = []
 for cam_idx in range(num_cam):
     ref_pts.append([])
     src_pts.append([])
+    lens.append(LensDistortion(cam_idx, args.cal_dir, args.cal_dir))
 
 if not use_saved_results:
     while not all_files_read:
@@ -65,6 +68,9 @@ if not use_saved_results:
             if img is None:
                 all_files_read = True
                 break
+
+            if lens[cam_idx].distortion_map() is not None:
+                img = lens[cam_idx].correct_distortion(img)
 
             if cam_idx == 0:
                 # save reference image
@@ -133,7 +139,7 @@ if not use_saved_results:
                             for y_search in range(search_y_min, search_y_max+1):
 
                                 srcxs = max(0, xs - max_disparity)
-                                srcxe = min(srcxs + int(1.0 / scale * roi[2]), rect_ref.shape[1])
+                                srcxe = min(srcxs + int(1.0 / scale * roi[2]), rect_src.shape[1])
                                 srcys = max(0, ys + y_search)
                                 srcye = min(srcys + int(1.0 / scale * roi[3]), rect_src.shape[0])
 
@@ -168,11 +174,11 @@ if not use_saved_results:
                             min_ye = min_ys + int(1.0 / scale * roi[3])
                             min_ym = int((min_ys + min_ye) / 2.0)
                             min_xe = min_xs + int(1.0 / scale * roi[2])
-                            updated_overlay = cv2.line(rect_overlay.copy(), (0, min_ym), (rect_overlay.shape[1], min_ym), (0, 255, 0), 1)
-                            updated_overlay = cv2.line(updated_overlay, (0, min_ys), (rect_overlay.shape[1], min_ys), (255, 0, 0), 1)
-                            updated_overlay = cv2.line(updated_overlay, (0, min_ye), (rect_overlay.shape[1], min_ye), (0, 0, 255), 1)
-                            updated_overlay = cv2.line(updated_overlay, (min_xs, 0), (min_xs, rect_overlay.shape[0]), (0, 0, 255), 1)
-                            updated_overlay = cv2.line(updated_overlay, (min_xe, 0), (min_xe, rect_overlay.shape[0]), (0, 0, 255), 1)
+                            updated_overlay = cv2.line(rect_overlay.copy(), (0, min_ym), (rect_overlay.shape[1], min_ym), (0, 255, 0), int(1.0 / scale))
+                            updated_overlay = cv2.line(updated_overlay, (0, min_ys), (rect_overlay.shape[1], min_ys), (255, 0, 0), int(1.0 / scale))
+                            updated_overlay = cv2.line(updated_overlay, (0, min_ye), (rect_overlay.shape[1], min_ye), (0, 0, 255), int(1.0 / scale))
+                            updated_overlay = cv2.line(updated_overlay, (min_xs, 0), (min_xs, rect_overlay.shape[0]), (0, 0, 255), int(1.0 / scale))
+                            updated_overlay = cv2.line(updated_overlay, (min_xe, 0), (min_xe, rect_overlay.shape[0]), (0, 0, 255), int(1.0 / scale))
                             img = cv2.resize(updated_overlay, dsize=None, fx=scale, fy=scale)
                             cv2.imshow("Rect Overlay Cam {} - Cam {}".format(setup_info.RigInfo.module_name[0],
                                                                  setup_info.RigInfo.module_name[cam_idx]), img)
