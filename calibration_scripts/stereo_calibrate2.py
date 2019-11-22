@@ -33,6 +33,8 @@ parser.add_argument('--image_dir', default='Oct2_cal')
 parser.add_argument('--cal_dir', default='Oct2_cal')
 parser.add_argument('--fix_focal_length', action="store_true", default=False, help='use this option if the focal length is to be determined explicitly and then set to that value')
 parser.add_argument('--distortion_map', action="store_true", default=False, help='Use distortion map')
+parser.add_argument('--fix_intrinsics', action="store_true", default=False, help='use this option if intrinsics have been estimated before and need to be used as such ')
+parser.add_argument('--json_filename', default='calibration_fixed.json', help='calibration json file to read intrinsics from')
 
 args, unknown = parser.parse_known_args()
 if unknown:
@@ -66,6 +68,11 @@ process_image_files = True
 force_fx_eq_fy = True
 use_2step_findchessboard = False
 
+if args.fix_intrinsics:
+    cal_info_read = CalibrationInfo(args.cal_dir, args.json_filename)
+    D_fixed = cal_info_read.D()
+    K_fixed = cal_info_read.K()
+    
 print("")
 print("Script Options:")
 print("  show_images: {}".format(show_images))
@@ -184,8 +191,18 @@ f = fl_mm * 1.0e-3 / (pixel_size_um * 1.0e-6)
 R_guess = np.identity(3)
 
 i_flags = cv2.CALIB_USE_INTRINSIC_GUESS
-if args.fix_focal_length is True:
+if args.fix_focal_length:
     i_flags |= cv2.CALIB_FIX_FOCAL_LENGTH
+if args.fix_intrinsics:
+    i_flags |= cv2.CALIB_FIX_FOCAL_LENGTH
+    i_flags |= cv2.CALIB_FIX_PRINCIPAL_POINT
+    i_flags |= cv2.CALIB_FIX_K1
+    i_flags |= cv2.CALIB_FIX_K2
+    i_flags |= cv2.CALIB_FIX_K3
+    i_flags |= cv2.CALIB_FIX_K4
+    i_flags |= cv2.CALIB_FIX_K5
+    i_flags |= cv2.CALIB_FIX_K6
+    i_flags |= cv2.CALIB_FIX_S1_S2_S3_S4
 i_flags |= cv2.CALIB_ZERO_TANGENT_DIST
 i_flags |= cv2.CALIB_FIX_K3
 # i_flags |= cv2.CALIB_RATIONAL_MODEL
@@ -238,10 +255,13 @@ for cam_idx in range(num_cam):
     print("   Focal Length (mm): {}".format(fl_mm))
     print("   Chart: {}, ({}, {}) x {} mm".format(setupInfo.ChartInfo.name, setupInfo.ChartInfo.nx, setupInfo.ChartInfo.ny, setupInfo.ChartInfo.size_mm))
 
-    if args.fix_focal_length is True:
+    if args.fix_focal_length:
         K_guess = np.array([[setupInfo.CalibMagInfo.fixed_focal_length[cam_idx], 0, setupInfo.SensorInfo.width*0.5],
                             [0, setupInfo.CalibMagInfo.fixed_focal_length[cam_idx], setupInfo.SensorInfo.height*0.5],
                             [0, 0, 1]])
+    elif args.fix_intrinsics:
+        D1 = D_fixed[cam_idx]
+        K_guess = K_fixed[cam_idx]
     else:
         K_guess = np.array([[f, 0, setupInfo.SensorInfo.width*0.5],
                             [0, f, setupInfo.SensorInfo.height*0.5],
@@ -253,7 +273,10 @@ for cam_idx in range(num_cam):
         obj_pts.append(objp)
         img_pts.append(intrinsic_pts[cam_idx][capture_idx])
 
-    reproj_error, K1, D1, rvecs1, tvecs1, I, E, viewErr = cv2.calibrateCameraExtended(obj_pts, img_pts, img_size, K_guess.copy(), None, flags=i_flags)
+    if args.fix_intrinsics:
+        reproj_error, K1, D1, rvecs1, tvecs1, I, E, viewErr = cv2.calibrateCameraExtended(obj_pts, img_pts, img_size, K_guess.copy(), D1.copy(), flags=i_flags)
+    else:
+        reproj_error, K1, D1, rvecs1, tvecs1, I, E, viewErr = cv2.calibrateCameraExtended(obj_pts, img_pts, img_size, K_guess.copy(), None, flags=i_flags)
     K.append(K1)
     D.append(D1)
     view_error.append(viewErr)
