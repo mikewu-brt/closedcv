@@ -113,9 +113,9 @@ class CalibrationInfo:
             }
 
             t_vec = {
-                "x": self.__T[cam_idx, 0, 0],
-                "y": self.__T[cam_idx, 1, 0],
-                "z": self.__T[cam_idx, 2, 0],
+                "x": self.__T[cam_idx, 0, 0] * 1000.0,
+                "y": self.__T[cam_idx, 1, 0] * 1000.0,
+                "z": self.__T[cam_idx, 2, 0] * 1000.0,
             }
 
             cal_info["module_calibration"][-1]["geometry"]["per_focus_calibration"] = []
@@ -185,9 +185,9 @@ class CalibrationInfo:
                 self.__R[cam_idx, 2, 1] = pfc["extrinsics"]["canonical"]["rotation"]["x21"]
                 self.__R[cam_idx, 2, 2] = pfc["extrinsics"]["canonical"]["rotation"]["x22"]
 
-                self.__T[cam_idx, 0, 0] = pfc["extrinsics"]["canonical"]["translation"]["x"]
-                self.__T[cam_idx, 1, 0] = pfc["extrinsics"]["canonical"]["translation"]["y"]
-                self.__T[cam_idx, 2, 0] = pfc["extrinsics"]["canonical"]["translation"]["z"]
+                self.__T[cam_idx, 0, 0] = pfc["extrinsics"]["canonical"]["translation"]["x"] / 1000.0
+                self.__T[cam_idx, 1, 0] = pfc["extrinsics"]["canonical"]["translation"]["y"] / 1000.0
+                self.__T[cam_idx, 2, 0] = pfc["extrinsics"]["canonical"]["translation"]["z"] / 1000.0
 
             self.__D[cam_idx, 0] = np.array(module_cal["geometry"]["distortion"]["polynomial"]["coeffs"])
             cam_idx += 1
