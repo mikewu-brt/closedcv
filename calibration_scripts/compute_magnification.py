@@ -151,8 +151,8 @@ print("delta:")
 print(delta)
 
 #two methiods: (1) take the mean of the three values for the camera or (2) take the highest magnitude
-#delta_new = compute_magnification(args, np.mean(delta))
-delta_new = compute_magnification(args, np.max(np.abs(delta)) * np.sign(delta))
+delta_new = compute_magnification(args, np.mean(delta))
+#delta_new = compute_magnification(args, np.max(np.abs(delta)) * np.sign(delta))
 
 print("delta_new:")
 print(delta_new)
