@@ -63,6 +63,19 @@ class CalibrationInfo:
         else:
             self.__T[cam_idx] = T
 
+    def vignetting(self, cam_idx=None):
+        # roi -> (width, height)
+        if cam_idx is None:
+            return self.__vig
+        return self.__vig[cam_idx]
+
+    def set_vignetting(self, vig, roi, cam_idx=None):
+        # roi -> (width, height)
+        if cam_idx is None:
+            self.__vig = vig
+        else:
+            self.__vig[cam_idx] = vig
+
     def write_json(self, filename):
         # Build json file
         cal_info = {}
@@ -145,6 +158,26 @@ class CalibrationInfo:
                 },
             }
 
+            if self.__vig is not None:
+                # Generate crosstalk (identity matrix)
+                vig_ct = np.empty((self.__vig[cam_idx].shape[1], self.__vig[cam_idx].shape[0], 4, 4))
+                vig_ct[:, :] = np.identity(4)
+                cal_info["module_calibration"][-1]["vignetting"] = {
+                    "width": int(self.__vig[cam_idx].shape[1]),
+                    "height": int(self.__vig[cam_idx].shape[0]),
+                    "crosstalk": {
+                        "data_packed": vig_ct.reshape(-1).astype(np.uint).tolist(),
+                    },
+                    "vignetting": [{
+                        "hall_code": 0,
+                        "vignetting": {
+                            "width": int(self.__vig[cam_idx].shape[1]),
+                            "height": int(self.__vig[cam_idx].shape[0]),
+                            "data": self.__vig[cam_idx].reshape(-1).tolist()
+                        }
+                    }]
+                }
+
         json_enc = json.JSONEncoder(sort_keys=True, allow_nan=False, indent=True)
         fd = open(os.path.join(self.__cal_dir, filename), 'w')
         fd.write(json_enc.encode(cal_info))
@@ -160,6 +193,7 @@ class CalibrationInfo:
         self.__R = np.zeros((num_cam, 3, 3), dtype=np.float)
         self.__T = np.zeros((num_cam, 3, 1), dtype=np.float)
         self.__D = np.zeros((num_cam, 1, 5), dtype=np.float)
+        self.__vig = None
 
         cam_idx = 0
         for module_cal in raw_cal["module_calibration"]:
@@ -190,6 +224,13 @@ class CalibrationInfo:
                 self.__T[cam_idx, 2, 0] = pfc["extrinsics"]["canonical"]["translation"]["z"] / 1000.0
 
             self.__D[cam_idx, 0] = np.array(module_cal["geometry"]["distortion"]["polynomial"]["coeffs"])
+
+            if module_cal.get("vignetting", None) is not None:
+                if cam_idx == 0:
+                    self.__vig = []
+                width = module_cal["vignetting"]["vignetting"][0]["vignetting"]["width"]
+                height = module_cal["vignetting"]["vignetting"][0]["vignetting"]["height"]
+                self.__vig.append(np.array(module_cal["vignetting"]["vignetting"][0]["vignetting"]["data"]).reshape(height, width))
             cam_idx += 1
 
     def checkin_cal_file(self):
@@ -202,7 +243,7 @@ class CalibrationInfo:
         cmd = "cp \"{}\" cal-files/{}".format(infile, outfile)
         os.system(cmd)
 
-    def __init__(self, cal_dir, json_fname=None, K=None, D=None, R=None, T=None):
+    def __init__(self, cal_dir, json_fname=None, K=None, D=None, R=None, T=None, V=None):
         path_to_image_dir = os.getenv("PATH_TO_IMAGE_DIR")
         if path_to_image_dir is None:
             path_to_image_dir = '.'
@@ -214,5 +255,6 @@ class CalibrationInfo:
             self.__D = D
             self.__R = R
             self.__T = T
+            self.__vig = V
         else:
             self.read_json(os.path.join(self.__cal_dir, json_fname))

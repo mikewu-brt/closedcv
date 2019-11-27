@@ -64,7 +64,7 @@ criteria = (cv2.TERM_CRITERIA_EPS + cv2.TERM_CRITERIA_MAX_ITER, 30, 0.001)
 
 # Misc control
 show_images = True
-process_image_files = True
+process_image_files = False
 force_fx_eq_fy = True
 use_2step_findchessboard = False
 
@@ -373,8 +373,15 @@ for cam_idx in range(num_cam):
         T.append(np.zeros((3, 1)))
 
 
+# Compute lens shading info
+V = None
+if lens_distortion[0].vignetting() is not None:
+    V = []
+    for cam_idx in range(num_cam):
+        V.append(lens_distortion[cam_idx].json_vignetting((17, 13)))
+
 # Save results
-cal_info = CalibrationInfo(args.cal_dir, K=np.array(K), D=np.array(D), R=np.array(R), T=np.array(T))
+cal_info = CalibrationInfo(args.cal_dir, K=np.array(K), D=np.array(D), R=np.array(R), T=np.array(T), V=np.array(V))
 cal_info.write_json("calibration.json")
 
 for cam_idx in range(num_cam):
