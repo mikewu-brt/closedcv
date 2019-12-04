@@ -32,6 +32,7 @@ orientation = 0
 parser = argparse.ArgumentParser(description="Compute distance using random spacial points")
 parser.add_argument('--cal_dir', default='Calibration_Aug23')
 parser.add_argument('--image_dir', default='Outside_Aug15_0')
+parser.add_argument('--start_idx', type=int, default=0)
 
 args, unknown = parser.parse_known_args()
 if unknown:
@@ -64,12 +65,13 @@ for cam_idx in range(num_cam):
 if not use_saved_results:
     while not all_files_read:
         for cam_idx in range(num_cam):
-            img, _ = image_helper.read_image_file(cam_idx, orientation, scale_to_8bit=False)
+            img, _ = image_helper.read_image_file(cam_idx, orientation + args.start_idx, scale_to_8bit=False)
             if img is None:
                 all_files_read = True
                 break
 
             if lens[cam_idx].distortion_map() is not None:
+                print("Correct {} image with distortion map".format(setup_info.RigInfo.module_name[cam_idx]))
                 img = lens[cam_idx].correct_distortion(img)
 
             if cam_idx == 0:
@@ -210,7 +212,7 @@ else:
     ref_pts = image_helper.load_np_file("ref_pts.npy")
     src_pts = image_helper.load_np_file("src_pts.npy")
 
-gt = image_helper.load_np_file("ground_truth.npy")
+gt = image_helper.load_np_file("ground_truth.npy")[args.start_idx:]
 for cam_idx in range(1, num_cam):
     R1, R2, P1, P2, Q, roi1, roi2 = stereo.rectification_matrix(cam_idx)
     # Compute results

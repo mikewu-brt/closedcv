@@ -118,7 +118,6 @@ class LensDistortion:
         self.__lens_shade_filter[:, :, 1] = self.__lens_shade_filter[:, :, 0]
         self.__lens_shade_filter[:, :, 2] = self.__lens_shade_filter[:, :, 0]
 
-
     def opencv_distortion_map(self, distortion_map=None):
         if distortion_map is None:
             distortion_map = self.__dist_map
@@ -139,8 +138,8 @@ class LensDistortion:
         self.__dist_map[:, :, 0] = -np.subtract(cv_dist_map[:, :, 0], np.arange(nx))
         self.__dist_map[:, :, 1] = -np.subtract(cv_dist_map[:, :, 1].T, np.arange(ny).T).T
 
-    def asic_distortion_map(self, decimate=16):
-        decimate *= 2
+    def asic_distortion_map(self, pixel_quad_decimate=16):
+        decimate = 2 * pixel_quad_decimate
 
         # Decimate and extrapolate
         ny, nx, _ = self.__dist_map.shape

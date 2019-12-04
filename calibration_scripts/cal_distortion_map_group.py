@@ -62,7 +62,7 @@ if unknown:
 
 ####################
 
-use_saved_results = True
+use_saved_results = False
 
 image_helper = Image(args.image_dir)
 display_size = image_helper.display_size(1024)
