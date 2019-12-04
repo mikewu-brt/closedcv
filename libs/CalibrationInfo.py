@@ -243,7 +243,7 @@ class CalibrationInfo:
         cmd = "cp \"{}\" cal-files/{}".format(infile, outfile)
         os.system(cmd)
 
-    def __init__(self, cal_dir, json_fname=None, K=None, D=None, R=None, T=None, V=None):
+    def __init__(self, cal_dir, json_fname="calibration.json", K=None, D=None, R=None, T=None, V=None):
         path_to_image_dir = os.getenv("PATH_TO_IMAGE_DIR")
         if path_to_image_dir is None:
             path_to_image_dir = '.'

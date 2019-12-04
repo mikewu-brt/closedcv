@@ -132,6 +132,54 @@ class LensDistortion:
         dist_map[:, :, 1] = np.add(np.arange(dist_map.shape[0]).T, -dist_map[:, :, 1].T).T
         return dist_map
 
+    def set_opencv_distortion_map(self, cv_dist_map):
+        # Convert an OpenCV map into internal map
+        ny, nx, _ = cv_dist_map.shape
+        self.__dist_map = np.empty((ny, nx, 2), dtype=np.float32)
+        self.__dist_map[:, :, 0] = -np.subtract(cv_dist_map[:, :, 0], np.arange(nx))
+        self.__dist_map[:, :, 1] = -np.subtract(cv_dist_map[:, :, 1].T, np.arange(ny).T).T
+
+    def asic_distortion_map(self, decimate=16):
+        decimate *= 2
+
+        # Decimate and extrapolate
+        ny, nx, _ = self.__dist_map.shape
+        x = np.arange(nx)
+        y = np.arange(ny)
+        fx = scipy.interpolate.RegularGridInterpolator((y, x), -self.__dist_map[:, :, 0],
+                                                       method='linear', bounds_error=False, fill_value=None)
+        fy = scipy.interpolate.RegularGridInterpolator((y, x), -self.__dist_map[:, :, 1],
+                                                       method='linear', bounds_error=False, fill_value=None)
+
+        dx = int(nx / decimate)
+        dy = int(ny / decimate)
+        y, x = np.meshgrid(np.arange(dy + 1), np.arange(dx + 1), indexing='ij')
+        pts = np.array([y.reshape(-1), x.reshape(-1)]).T * decimate + np.array([0.5, 0.5])
+        asic_map = np.empty((dy+1, dx+1, 2))
+        asic_map[:, :, 0] = fx(pts).reshape(dy + 1, dx + 1) / 2.0
+        asic_map[:, :, 1] = fy(pts).reshape(dy + 1, dx + 1) / 2.0
+        return asic_map
+
+    def set_asic_distortion_map(self, asic_dist_map, img_size):
+        nx = img_size[0]
+        ny = img_size[1]
+        dy, dx, _ = asic_dist_map.shape
+        decimate = int(nx / (dx - 1))
+
+        x = np.arange(dx) * decimate + 0.5
+        y = np.arange(dy) * decimate + 0.5
+        fx = scipy.interpolate.RegularGridInterpolator((y, x), -2.0 * asic_dist_map[:, :, 0], method='linear',
+                                                       bounds_error=False, fill_value=None)
+        fy = scipy.interpolate.RegularGridInterpolator((y, x), -2.0 * asic_dist_map[:, :, 1], method='linear',
+                                                       bounds_error=False, fill_value=None)
+
+        y, x = np.meshgrid(np.arange(ny), np.arange(nx), indexing='ij')
+        pts = np.array([y.reshape(-1), x.reshape(-1)]).T
+        self.__dist_map = np.empty((ny, nx, 2), dtype=np.float32)
+        self.__dist_map[:, :, 0] = fx(pts).reshape(ny, nx)
+        self.__dist_map[:, :, 1] = fy(pts).reshape(ny, nx)
+        return
+
     def correct_distortion(self, img, distortion_map=None, K=None, D=None):
         if distortion_map is not None and D is not None:
             print("Only a distortion_map or distortion_vector should be used, not both")
