@@ -33,6 +33,9 @@ if unknown:
 # Read image file
 image_file = "../Depth Captures/Lenna.png"
 img = cv2.imread(image_file)
+#image_helper = Image("outside_nov21_25mm_f2_8_left")
+#img, _ = image_helper.read_image_file(0, 20, scale_to_8bit=False)
+
 cv2.imshow("Orig", img)
 ny, nx, _ = img.shape
 
@@ -43,7 +46,7 @@ if lens_distortion.distortion_map() is not None:
     lens_distortion.plot_distortion_map(0)
 else:
     print("Creating distortion map from K and D")
-    cal_info = CalibrationInfo(args.cal_dir)
+    cal_info = CalibrationInfo(args.cal_dir, "calibration.json")
     cv_dist_map, _ = cv2.initUndistortRectifyMap(cameraMatrix=cal_info.K(0), distCoeffs=cal_info.D(0), R=np.identity(3),
                                                newCameraMatrix=cal_info.K(0), size=(nx, ny), m1type=cv2.CV_32FC2)
     lens_distortion.set_opencv_distortion_map(cv_dist_map)
