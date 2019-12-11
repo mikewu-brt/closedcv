@@ -54,7 +54,8 @@ else:
 """
 Decimate the distortion map
 """
-asic_dist_map = lens_distortion.asic_distortion_map(decimate=16)
+decimate = 16 / 2  # For Vlad's test script, sensor is already decimated into quads so decrease the decimation rate
+asic_dist_map = lens_distortion.asic_distortion_map(pixel_quad_decimate=16 // 2) * 2.0
 
 image_helper = Image(args.cal_dir)
 image_helper.save_text_file("asic_mapx", asic_dist_map[:, :, 0])
@@ -63,8 +64,8 @@ image_helper.save_np_file("asic_map", asic_dist_map)
 
 # Extrapolate map back
 lens_distortion2 = LensDistortion(0)
-lens_distortion2.set_asic_distortion_map(asic_dist_map, (nx, ny))
-dist_img = lens_distortion2.correct_distortion(img)
+lens_distortion2.set_asic_distortion_map(asic_dist_map / 2.0, (nx, ny))
+dist_img = lens_distortion2.correct_distortion(img, interpolation=cv2.INTER_LANCZOS4)
 
 
 cv2.imshow("Distorted", dist_img)

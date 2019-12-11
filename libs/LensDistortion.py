@@ -11,6 +11,7 @@
 #
 
 import sys
+import math
 import cv2
 import numpy as np
 from libs.Image import Image
@@ -138,7 +139,13 @@ class LensDistortion:
         self.__dist_map[:, :, 0] = -np.subtract(cv_dist_map[:, :, 0], np.arange(nx))
         self.__dist_map[:, :, 1] = -np.subtract(cv_dist_map[:, :, 1].T, np.arange(ny).T).T
 
-    def asic_distortion_map(self, pixel_quad_decimate=16):
+    def set_radial_distortion_map(self, K, D, size):
+        dist_map, _ = cv2.initUndistortRectifyMap(cameraMatrix=K, distCoeffs=D, R=np.identity(3), newCameraMatrix=K,
+                                                  size=size, m1type=cv2.CV_32FC2)
+        self.set_opencv_distortion_map(dist_map)
+
+
+    def asic_distortion_map(self, pixel_quad_decimate=16, pixel_offset=True):
         decimate = 2 * pixel_quad_decimate
 
         # Decimate and extrapolate
@@ -150,23 +157,28 @@ class LensDistortion:
         fy = scipy.interpolate.RegularGridInterpolator((y, x), -self.__dist_map[:, :, 1],
                                                        method='linear', bounds_error=False, fill_value=None)
 
-        dx = int(nx / decimate)
-        dy = int(ny / decimate)
+        dx = math.ceil(nx / decimate)
+        dy = math.ceil(ny / decimate)
         y, x = np.meshgrid(np.arange(dy + 1), np.arange(dx + 1), indexing='ij')
-        pts = np.array([y.reshape(-1), x.reshape(-1)]).T * decimate + np.array([0.5, 0.5])
+        pts = np.array([y.reshape(-1), x.reshape(-1)]).T.astype(np.float64) * decimate
+        if pixel_offset:
+            pts += np.array([0.5, 0.5])
         asic_map = np.empty((dy+1, dx+1, 2))
         asic_map[:, :, 0] = fx(pts).reshape(dy + 1, dx + 1) / 2.0
         asic_map[:, :, 1] = fy(pts).reshape(dy + 1, dx + 1) / 2.0
         return asic_map
 
-    def set_asic_distortion_map(self, asic_dist_map, img_size):
+    def set_asic_distortion_map(self, asic_dist_map, img_size, pixel_offset=True):
         nx = img_size[0]
         ny = img_size[1]
         dy, dx, _ = asic_dist_map.shape
-        decimate = int(nx / (dx - 1))
+        decimate = math.ceil(nx / (dx - 1))
 
-        x = np.arange(dx) * decimate + 0.5
-        y = np.arange(dy) * decimate + 0.5
+        x = np.arange(dx, dtype=np.float64) * decimate
+        y = np.arange(dy, dtype=np.float64) * decimate
+        if pixel_offset:
+            x += 0.5
+            y += 0.5
         fx = scipy.interpolate.RegularGridInterpolator((y, x), -2.0 * asic_dist_map[:, :, 0], method='linear',
                                                        bounds_error=False, fill_value=None)
         fy = scipy.interpolate.RegularGridInterpolator((y, x), -2.0 * asic_dist_map[:, :, 1], method='linear',
@@ -179,7 +191,7 @@ class LensDistortion:
         self.__dist_map[:, :, 1] = fy(pts).reshape(ny, nx)
         return
 
-    def correct_distortion(self, img, distortion_map=None, K=None, D=None):
+    def correct_distortion(self, img, distortion_map=None, K=None, D=None, interpolation=cv2.INTER_LINEAR):
         if distortion_map is not None and D is not None:
             print("Only a distortion_map or distortion_vector should be used, not both")
             sys.exit(-1)
@@ -198,7 +210,7 @@ class LensDistortion:
             sys.exit(-1)
 
         # Remap image using distortion map
-        return cv2.remap(img.copy(), dist_map, None, cv2.INTER_LINEAR)
+        return cv2.remap(img.copy(), dist_map, None, interpolation=interpolation)
 
     def correct_vignetting(self, img, lens_shade_filter=None, apply_flag=True, alpha=0.9, max_limit=65535, scale_to_8bit=False):
         if lens_shade_filter is None:
