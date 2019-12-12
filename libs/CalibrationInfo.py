@@ -13,9 +13,14 @@
 import numpy as np
 import importlib
 import os
-import json
 from libs.Image import *
-
+import lightheader_pb2
+import camera_id_pb2
+import sensor_type_pb2
+import matrix3x3f_pb2
+import point3f_pb2
+import hw_info_pb2
+from google.protobuf import json_format
 
 class CalibrationInfo:
 
@@ -77,118 +82,89 @@ class CalibrationInfo:
             self.__vig[cam_idx] = vig
 
     def write_json(self, filename):
-        # Build json file
-        cal_info = {}
-        cal_info["module_calibration"] = []
-        cal_info["hw_info"] = {}
-        cal_info["hw_info"]["camera"] = []
+        lightheader = lightheader_pb2.LightHeader()
+        if self.__imu_info is not None:
+            lightheader.hw_info.CopyFrom(self.__imu_info)
+
+        lightheader.hw_info.manufacturer = self.__setup.RigInfo.rig_manufacturer
 
         num_cam = self.__K.shape[0]
         for cam_idx in range(num_cam):
-            cal_info["hw_info"]["manufacturer"] = self.__setup.RigInfo.rig_manufacturer
-            cal_info["hw_info"]["camera"].append([])
-            cal_info["hw_info"]["camera"][-1] = {}
-            cal_info["hw_info"]["camera"][-1]["id"] = self.__setup.RigInfo.module_name[cam_idx]
-            cal_info["hw_info"]["camera"][-1]["sensor"] = self.__setup.SensorInfo.type
-            cal_info["hw_info"]["camera"][-1]["lens"] = self.__setup.LensInfo.type
-            cal_info["hw_info"]["camera"][-1]["focal_length_mm"] = self.__setup.LensInfo.fl_mm
-            cal_info["hw_info"]["camera"][-1]["pixel_size_mm"] = self.__setup.SensorInfo.pixel_size_um / 1000.0
-            cal_info["hw_info"]["camera"][-1]["serial_number"] = self.__setup.RigInfo.camera_module_serial_number[cam_idx]
-            cal_info["hw_info"]["camera"][-1]["manufacturer"] = self.__setup.RigInfo.camera_module_manufacturer
+            camera = lightheader.hw_info.camera.add()
+            camera.id = camera_id_pb2.CameraID.Value(self.__setup.RigInfo.module_name[cam_idx])
+            camera.sensor = sensor_type_pb2.SensorType.Value(self.__setup.SensorInfo.type)
+            camera.lens = camera.LensType.Value(self.__setup.LensInfo.type)
+            camera.focal_length_mm = self.__setup.LensInfo.fl_mm
+            camera.pixel_size_mm = self.__setup.SensorInfo.pixel_size_um / 1000.0
+            camera.serial_number = self.__setup.RigInfo.camera_module_serial_number[cam_idx]
+            camera.manufacturer = self.__setup.RigInfo.camera_module_manufacturer
 
-            cal_info["module_calibration"].append([])
-            cal_info["module_calibration"][-1] = {}
-            cal_info["module_calibration"][-1]["camera_id"] = self.__setup.RigInfo.module_name[cam_idx]
-            cal_info["module_calibration"][-1]["geometry"] = {}
+            cal_info = lightheader.module_calibration.add()
+            cal_info.camera_id = camera_id_pb2.CameraID.Value(self.__setup.RigInfo.module_name[cam_idx])
 
-            k_mat = {
-                "x00": self.__K[cam_idx, 0, 0],
-                "x01": self.__K[cam_idx, 0, 1],
-                "x02": self.__K[cam_idx, 0, 2],
-                "x10": self.__K[cam_idx, 1, 0],
-                "x11": self.__K[cam_idx, 1, 1],
-                "x12": self.__K[cam_idx, 1, 2],
-                "x20": self.__K[cam_idx, 2, 0],
-                "x21": self.__K[cam_idx, 2, 1],
-                "x22": self.__K[cam_idx, 2, 2],
-            }
+            k_mat = matrix3x3f_pb2.Matrix3x3F()
+            k_mat.x00 = self.__K[cam_idx, 0, 0]
+            k_mat.x01 = self.__K[cam_idx, 0, 1]
+            k_mat.x02 = self.__K[cam_idx, 0, 2]
+            k_mat.x10 = self.__K[cam_idx, 1, 0]
+            k_mat.x11 = self.__K[cam_idx, 1, 1]
+            k_mat.x12 = self.__K[cam_idx, 1, 2]
+            k_mat.x20 = self.__K[cam_idx, 2, 0]
+            k_mat.x21 = self.__K[cam_idx, 2, 1]
+            k_mat.x22 = self.__K[cam_idx, 2, 2]
 
-            r_mat = {
-                "x00": self.__R[cam_idx, 0, 0],
-                "x01": self.__R[cam_idx, 0, 1],
-                "x02": self.__R[cam_idx, 0, 2],
-                "x10": self.__R[cam_idx, 1, 0],
-                "x11": self.__R[cam_idx, 1, 1],
-                "x12": self.__R[cam_idx, 1, 2],
-                "x20": self.__R[cam_idx, 2, 0],
-                "x21": self.__R[cam_idx, 2, 1],
-                "x22": self.__R[cam_idx, 2, 2],
-            }
+            r_mat = matrix3x3f_pb2.Matrix3x3F()
+            r_mat.x00 = self.__R[cam_idx, 0, 0]
+            r_mat.x01 = self.__R[cam_idx, 0, 1]
+            r_mat.x02 = self.__R[cam_idx, 0, 2]
+            r_mat.x10 = self.__R[cam_idx, 1, 0]
+            r_mat.x11 = self.__R[cam_idx, 1, 1]
+            r_mat.x12 = self.__R[cam_idx, 1, 2]
+            r_mat.x20 = self.__R[cam_idx, 2, 0]
+            r_mat.x21 = self.__R[cam_idx, 2, 1]
+            r_mat.x22 = self.__R[cam_idx, 2, 2]
 
-            t_vec = {
-                "x": self.__T[cam_idx, 0, 0] * 1000.0,
-                "y": self.__T[cam_idx, 1, 0] * 1000.0,
-                "z": self.__T[cam_idx, 2, 0] * 1000.0,
-            }
+            t_vec = point3f_pb2.Point3F()
+            t_vec.x = self.__T[cam_idx, 0, 0] * 1000.0
+            t_vec.y = self.__T[cam_idx, 1, 0] * 1000.0
+            t_vec.z = self.__T[cam_idx, 2, 0] * 1000.0
 
-            cal_info["module_calibration"][-1]["geometry"]["per_focus_calibration"] = []
-            cal_info["module_calibration"][-1]["geometry"]["per_focus_calibration"].append([])
-            cal_info["module_calibration"][-1]["geometry"]["per_focus_calibration"][-1] = {
-                "focus_distance": self.__setup.LensInfo.focus_distance_mm,
-                "intrinsics": {"k_mat": k_mat},
-                "extrinsics": {
-                    "canonical": {
-                        "rotation": r_mat,
-                        "translation": t_vec,
-                    },
-                },
-            }
+            per_focus_cal = cal_info.geometry.per_focus_calibration.add()
+            per_focus_cal.focus_distance = self.__setup.LensInfo.focus_distance_mm
+            per_focus_cal.intrinsics.k_mat.CopyFrom(k_mat)
+            per_focus_cal.extrinsics.canonical.rotation.CopyFrom(r_mat)
+            per_focus_cal.extrinsics.canonical.translation.CopyFrom(t_vec)
 
-            cal_info["module_calibration"][-1]["geometry"]["distortion"] = {
-                "polynomial": {
-                    "distortion_center": {
-                        "x": self.__K[cam_idx, 0, 2],
-                        "y": self.__K[cam_idx, 1, 2],
-                    },
-                    "normalization": {
-                        "x": self.__K[cam_idx, 0, 0],
-                        "y": self.__K[cam_idx, 1, 1],
-                    },
-                    "coeffs": self.__D[cam_idx][0].tolist()
-                },
-            }
+            cal_info.geometry.distortion.polynomial.distortion_center.x = self.__K[cam_idx, 0, 2]
+            cal_info.geometry.distortion.polynomial.distortion_center.y = self.__K[cam_idx, 1, 2]
+            cal_info.geometry.distortion.polynomial.normalization.x = self.__K[cam_idx, 0, 0]
+            cal_info.geometry.distortion.polynomial.normalization.y = self.__K[cam_idx, 1, 1]
+            cal_info.geometry.distortion.polynomial.coeffs[:] = self.__D[cam_idx, 0]
 
             if self.__vig is not None:
                 # Generate crosstalk (identity matrix)
                 vig_ct = np.empty((self.__vig[cam_idx].shape[1], self.__vig[cam_idx].shape[0], 4, 4))
                 vig_ct[:, :] = np.identity(4)
-                cal_info["module_calibration"][-1]["vignetting"] = {
-                    "width": int(self.__vig[cam_idx].shape[1]),
-                    "height": int(self.__vig[cam_idx].shape[0]),
-                    "crosstalk": {
-                        "data_packed": vig_ct.reshape(-1).astype(np.uint).tolist(),
-                    },
-                    "vignetting": [{
-                        "hall_code": 0,
-                        "vignetting": {
-                            "width": int(self.__vig[cam_idx].shape[1]),
-                            "height": int(self.__vig[cam_idx].shape[0]),
-                            "data": self.__vig[cam_idx].reshape(-1).tolist()
-                        }
-                    }]
-                }
 
-        json_enc = json.JSONEncoder(sort_keys=True, allow_nan=False, indent=True)
-        fd = open(os.path.join(self.__cal_dir, filename), 'w')
-        fd.write(json_enc.encode(cal_info))
-        fd.close()
+                cal_info.vignetting.crosstalk.width = self.__vig[cam_idx].shape[1]
+                cal_info.vignetting.crosstalk.height = self.__vig[cam_idx].shape[0]
+                cal_info.vignetting.crosstalk.data_packed[:] = vig_ct.reshape(-1).astype(np.uint)
 
-    def read_json(self, filename):
-        fd = open(os.path.join(self.__cal_dir, filename), 'r')
-        raw_cal = json.load(fd)
-        fd.close()
+                vignetting = cal_info.vignetting.vignetting.add()
+                vignetting.hall_code = 0
+                vignetting.vignetting.width = self.__vig[cam_idx].shape[1]
+                vignetting.vignetting.height = self.__vig[cam_idx].shape[0]
+                vignetting.vignetting.data[:] = self.__vig[cam_idx].reshape(-1)
 
-        num_cam = len(raw_cal["module_calibration"])
+        json_str = json_format.MessageToJson(lightheader, preserving_proto_field_name=True, sort_keys=True)
+        open(os.path.join(self.__cal_dir, filename), 'w').write(json_str)
+
+    def read_calibration_json(self, filename):
+        json_str = open(os.path.join(self.__cal_dir, filename), 'r').read()
+        lightheader = lightheader_pb2.LightHeader()
+        json_format.Parse(json_str, lightheader)
+
+        num_cam = len(lightheader.module_calibration)
         self.__K = np.zeros((num_cam, 3, 3), dtype=np.float)
         self.__R = np.zeros((num_cam, 3, 3), dtype=np.float)
         self.__T = np.zeros((num_cam, 3, 1), dtype=np.float)
@@ -196,41 +172,41 @@ class CalibrationInfo:
         self.__vig = None
 
         cam_idx = 0
-        for module_cal in raw_cal["module_calibration"]:
-            for pfc in module_cal["geometry"]["per_focus_calibration"]:
+        for module_cal in lightheader.module_calibration:
+            for pfc in module_cal.geometry.per_focus_calibration:
+                self.__K[cam_idx, 0, 0] = pfc.intrinsics.k_mat.x00
+                self.__K[cam_idx, 0, 1] = pfc.intrinsics.k_mat.x01
+                self.__K[cam_idx, 0, 2] = pfc.intrinsics.k_mat.x02
+                self.__K[cam_idx, 1, 0] = pfc.intrinsics.k_mat.x10
+                self.__K[cam_idx, 1, 1] = pfc.intrinsics.k_mat.x11
+                self.__K[cam_idx, 1, 2] = pfc.intrinsics.k_mat.x12
+                self.__K[cam_idx, 2, 0] = pfc.intrinsics.k_mat.x20
+                self.__K[cam_idx, 2, 1] = pfc.intrinsics.k_mat.x21
+                self.__K[cam_idx, 2, 2] = pfc.intrinsics.k_mat.x22
 
-                self.__K[cam_idx, 0, 0] = pfc["intrinsics"]["k_mat"]["x00"]
-                self.__K[cam_idx, 0, 1] = pfc["intrinsics"]["k_mat"]["x01"]
-                self.__K[cam_idx, 0, 2] = pfc["intrinsics"]["k_mat"]["x02"]
-                self.__K[cam_idx, 1, 0] = pfc["intrinsics"]["k_mat"]["x10"]
-                self.__K[cam_idx, 1, 1] = pfc["intrinsics"]["k_mat"]["x11"]
-                self.__K[cam_idx, 1, 2] = pfc["intrinsics"]["k_mat"]["x12"]
-                self.__K[cam_idx, 2, 0] = pfc["intrinsics"]["k_mat"]["x20"]
-                self.__K[cam_idx, 2, 1] = pfc["intrinsics"]["k_mat"]["x21"]
-                self.__K[cam_idx, 2, 2] = pfc["intrinsics"]["k_mat"]["x22"]
+                self.__R[cam_idx, 0, 0] = pfc.extrinsics.canonical.rotation.x00
+                self.__R[cam_idx, 0, 1] = pfc.extrinsics.canonical.rotation.x01
+                self.__R[cam_idx, 0, 2] = pfc.extrinsics.canonical.rotation.x02
+                self.__R[cam_idx, 1, 0] = pfc.extrinsics.canonical.rotation.x10
+                self.__R[cam_idx, 1, 1] = pfc.extrinsics.canonical.rotation.x11
+                self.__R[cam_idx, 1, 2] = pfc.extrinsics.canonical.rotation.x12
+                self.__R[cam_idx, 2, 0] = pfc.extrinsics.canonical.rotation.x20
+                self.__R[cam_idx, 2, 1] = pfc.extrinsics.canonical.rotation.x21
+                self.__R[cam_idx, 2, 2] = pfc.extrinsics.canonical.rotation.x22
 
-                self.__R[cam_idx, 0, 0] = pfc["extrinsics"]["canonical"]["rotation"]["x00"]
-                self.__R[cam_idx, 0, 1] = pfc["extrinsics"]["canonical"]["rotation"]["x01"]
-                self.__R[cam_idx, 0, 2] = pfc["extrinsics"]["canonical"]["rotation"]["x02"]
-                self.__R[cam_idx, 1, 0] = pfc["extrinsics"]["canonical"]["rotation"]["x10"]
-                self.__R[cam_idx, 1, 1] = pfc["extrinsics"]["canonical"]["rotation"]["x11"]
-                self.__R[cam_idx, 1, 2] = pfc["extrinsics"]["canonical"]["rotation"]["x12"]
-                self.__R[cam_idx, 2, 0] = pfc["extrinsics"]["canonical"]["rotation"]["x20"]
-                self.__R[cam_idx, 2, 1] = pfc["extrinsics"]["canonical"]["rotation"]["x21"]
-                self.__R[cam_idx, 2, 2] = pfc["extrinsics"]["canonical"]["rotation"]["x22"]
+                self.__T[cam_idx, 0, 0] = pfc.extrinsics.canonical.translation.x / 1000.0
+                self.__T[cam_idx, 1, 0] = pfc.extrinsics.canonical.translation.y / 1000.0
+                self.__T[cam_idx, 2, 0] = pfc.extrinsics.canonical.translation.z / 1000.0
 
-                self.__T[cam_idx, 0, 0] = pfc["extrinsics"]["canonical"]["translation"]["x"] / 1000.0
-                self.__T[cam_idx, 1, 0] = pfc["extrinsics"]["canonical"]["translation"]["y"] / 1000.0
-                self.__T[cam_idx, 2, 0] = pfc["extrinsics"]["canonical"]["translation"]["z"] / 1000.0
+            self.__D[cam_idx, 0] = np.array(module_cal.geometry.distortion.polynomial.coeffs[:])
 
-            self.__D[cam_idx, 0] = np.array(module_cal["geometry"]["distortion"]["polynomial"]["coeffs"])
-
-            if module_cal.get("vignetting", None) is not None:
+            if module_cal.HasField("vignetting"):
                 if cam_idx == 0:
                     self.__vig = []
-                width = module_cal["vignetting"]["vignetting"][0]["vignetting"]["width"]
-                height = module_cal["vignetting"]["vignetting"][0]["vignetting"]["height"]
-                self.__vig.append(np.array(module_cal["vignetting"]["vignetting"][0]["vignetting"]["data"]).reshape(height, width))
+                width = module_cal.vignetting.vignetting[0].vignetting.width
+                height = module_cal.vignetting.vignetting[0].vignetting.height
+                self.__vig.append(np.array(module_cal.vignetting.vignetting[0].vignetting.data).reshape(height, width))
+
             cam_idx += 1
 
     def checkin_cal_file(self):
@@ -243,19 +219,31 @@ class CalibrationInfo:
         cmd = "cp \"{}\" cal-files/{}".format(infile, outfile)
         os.system(cmd)
 
-    def __init__(self, cal_dir, json_fname=None, K=None, D=None, R=None, T=None, V=None):
+    def read_imu_json(self, filename):
+        json_str = open(os.path.join(self.__cal_dir, filename), 'r').read()
+        self.__imu_info = hw_info_pb2.HwInfo()
+        json_format.Parse(json_str, self.__imu_info)
+
+    def __init__(self, cal_dir, calibration_json_fname=None, K=None, D=None, R=None, T=None, V=None):
         path_to_image_dir = os.getenv("PATH_TO_IMAGE_DIR")
         if path_to_image_dir is None:
             path_to_image_dir = '.'
         self.__cal_dir = os.path.join(path_to_image_dir, cal_dir)
         self.__setup = importlib.import_module("{}.setup".format(cal_dir))
 
-        if json_fname is None:
+        if calibration_json_fname is None:
             self.__K = K
             self.__D = D
             self.__R = R
             self.__T = T
             self.__vig = V
         else:
-            print("Reading calibration from {}".format(json_fname))
-            self.read_json(os.path.join(self.__cal_dir, json_fname))
+            print("Reading calibration from {}".format(calibration_json_fname))
+            self.read_calibration_json(os.path.join(self.__cal_dir, calibration_json_fname))
+
+        # Attempt to read the imu.json file
+        self.__imu_info = None
+        if os.path.isfile(os.path.join(self.__cal_dir, "imu_auto.json")):
+            self.read_imu_json("imu_auto.json")
+
+

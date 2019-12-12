@@ -35,7 +35,7 @@ class Stereo:
 
         self.__setup = importlib.import_module("{}.setup".format(image_dir))
 
-        self.__cal_info = CalibrationInfo(cal_dir=image_dir, json_fname="calibration.json")
+        self.__cal_info = CalibrationInfo(cal_dir=image_dir, calibration_json_fname="calibration.json")
 
         if img_shape is None:
             # Read an image file to determine the size
