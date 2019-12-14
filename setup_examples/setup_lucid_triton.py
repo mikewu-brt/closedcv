@@ -48,9 +48,9 @@ class RigInfo:
     camera_module_manufacturer = "Lucid"
     camera_module_model = "TRI071S"
     camera_module_serial_number = ["193500101", "193500102", "192900007"]
-    input_image_filename = np.array(["Image_SN{}_f{{}}.raw".format(camera_module_serial_number[0].lower()),
-                                     "Image_SN{}_f{{}}.raw".format(camera_module_serial_number[1].lower()),
-                                     "Image_SN{}_f{{}}.raw".format(camera_module_serial_number[2].lower())])
+    input_image_filename = np.array(["Image_sn{}_f{{}}.raw".format(camera_module_serial_number[0].lower()),
+                                     "Image_sn{}_f{{}}.raw".format(camera_module_serial_number[1].lower()),
+                                     "Image_sn{}_f{{}}.raw".format(camera_module_serial_number[2].lower())])
     cam_position_m = np.array([[0.0, 0.0, 0.0], [0.5, 0.0, 0.0], [-0.38, 0.0, 0.0]])
     module_name = ["A1", "A2", "A3"]
     left_justified = False
