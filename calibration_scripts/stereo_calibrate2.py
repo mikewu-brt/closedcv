@@ -379,9 +379,10 @@ if lens_distortion[0].vignetting() is not None:
     V = []
     for cam_idx in range(num_cam):
         V.append(lens_distortion[cam_idx].json_vignetting((17, 13)))
+    V = np.array(V)
 
 # Save results
-cal_info = CalibrationInfo(args.cal_dir, K=np.array(K), D=np.array(D), R=np.array(R), T=np.array(T), V=np.array(V))
+cal_info = CalibrationInfo(args.cal_dir, K=np.array(K), D=np.array(D), R=np.array(R), T=np.array(T), V=V)
 cal_info.write_json("calibration.json")
 
 for cam_idx in range(num_cam):
