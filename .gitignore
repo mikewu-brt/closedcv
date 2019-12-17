@@ -3,3 +3,4 @@
 *.npy
 install
 *.deb
+xsens_read_ids/*.json

@@ -1,0 +1,68 @@
+protocolmanager.cpp.o: protocolmanager.cpp xscontrollerconfig.h \
+  ../xscommon/journaller.h ../xscommon/journalloglevel.h \
+  ../xscommon/abstractadditionallogger.h ../xstypes/xsstring.h \
+  ../xstypes/xstypesconfig.h ../xstypes/xstypedefs.h \
+  ../xstypes/pstdint.h ../xstypes/xsarray.h protocolmanager.h \
+  messagelocation.h iprotocolmanager.h ../xstypes/xsmessage.h \
+  ../xstypes/xsbytearray.h ../xstypes/xsdataidentifier.h \
+  ../xstypes/xsdataidentifiervalue.h ../xstypes/xsxbusmessageid.h \
+  ../xstypes/xsresultvalue.h ../xstypes/xsbusid.h xsprotocoltype.h \
+  ../xscommon/xsens_nonintrusive_shared_pointer.h iprotocolhandler.h \
+  communicator.h callbackmanagerxda.h xscallback.h xscallbackplainc.h \
+  ../xstypes/xsinforequest.h xsdevicestate.h xsconnectivitystate.h \
+  openportstage.h replyobject.h ../xstypes/xsdeviceid.h \
+  ../xscommon/xsens_mutex.h ../xstypes/xsthread.h ../xstypes/xstime.h \
+  ../xstypes/xstimestamp.h ../xstypes/xstimeinfo.h iointerfacefile.h \
+  ../xstypes/xsplatform.h iointerface.h ../xstypes/xsfilepos.h \
+  ../xstypes/xsfile.h serialinterface.h streaminterface.h \
+  ../xstypes/xsbaud.h ../xstypes/xsbaudcode.h ../xstypes/xsbaudrate.h \
+  ../xstypes/xscontrolline.h
+protocolmanager.cpp:
+xscontrollerconfig.h:
+../xscommon/journaller.h:
+../xscommon/journalloglevel.h:
+../xscommon/abstractadditionallogger.h:
+../xstypes/xsstring.h:
+../xstypes/xstypesconfig.h:
+../xstypes/xstypedefs.h:
+../xstypes/pstdint.h:
+../xstypes/xsarray.h:
+protocolmanager.h:
+messagelocation.h:
+iprotocolmanager.h:
+../xstypes/xsmessage.h:
+../xstypes/xsbytearray.h:
+../xstypes/xsdataidentifier.h:
+../xstypes/xsdataidentifiervalue.h:
+../xstypes/xsxbusmessageid.h:
+../xstypes/xsresultvalue.h:
+../xstypes/xsbusid.h:
+xsprotocoltype.h:
+../xscommon/xsens_nonintrusive_shared_pointer.h:
+iprotocolhandler.h:
+communicator.h:
+callbackmanagerxda.h:
+xscallback.h:
+xscallbackplainc.h:
+../xstypes/xsinforequest.h:
+xsdevicestate.h:
+xsconnectivitystate.h:
+openportstage.h:
+replyobject.h:
+../xstypes/xsdeviceid.h:
+../xscommon/xsens_mutex.h:
+../xstypes/xsthread.h:
+../xstypes/xstime.h:
+../xstypes/xstimestamp.h:
+../xstypes/xstimeinfo.h:
+iointerfacefile.h:
+../xstypes/xsplatform.h:
+iointerface.h:
+../xstypes/xsfilepos.h:
+../xstypes/xsfile.h:
+serialinterface.h:
+streaminterface.h:
+../xstypes/xsbaud.h:
+../xstypes/xsbaudcode.h:
+../xstypes/xsbaudrate.h:
+../xstypes/xscontrolline.h:

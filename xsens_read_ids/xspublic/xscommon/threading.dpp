@@ -1,0 +1,19 @@
+threading.cpp.o: threading.cpp xscommon_config.h ../xstypes/xstypesconfig.h \
+  ../xstypes/xstypedefs.h ../xstypes/pstdint.h ../xstypes/xsens_compat.h \
+  threading.h xsens_mutex.h ../xstypes/xsthread.h ../xstypes/xstime.h \
+  ../xstypes/xstimestamp.h ../xstypes/xsstring.h ../xstypes/xsarray.h \
+  ../xstypes/xstimeinfo.h
+threading.cpp:
+xscommon_config.h:
+../xstypes/xstypesconfig.h:
+../xstypes/xstypedefs.h:
+../xstypes/pstdint.h:
+../xstypes/xsens_compat.h:
+threading.h:
+xsens_mutex.h:
+../xstypes/xsthread.h:
+../xstypes/xstime.h:
+../xstypes/xstimestamp.h:
+../xstypes/xsstring.h:
+../xstypes/xsarray.h:
+../xstypes/xstimeinfo.h:
