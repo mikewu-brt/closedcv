@@ -19,6 +19,7 @@ import os
 import importlib
 import argparse
 from libs.Image import *
+from libs.LensDistortion import *
 import matplotlib as matplot
 matplot.use('TkAgg')
 import matplotlib.pyplot as plt
@@ -38,7 +39,6 @@ def compute_entrance_to_pupil_adjustment_val(mag_x=None, mag_y=None, obj_dist=No
     factor = mag/(1-mag)
 
     distance_to_pupil_adj = (factor[1,:] * obj_dist[1,:] - factor[0,:] * obj_dist[0,:]) / (factor[0,:] - factor[1,:])
-    #print(distance_to_pupil_adj)
     return(distance_to_pupil_adj);
 
 def compute_magnification(args=None, delta_shift=0):
@@ -52,6 +52,12 @@ def compute_magnification(args=None, delta_shift=0):
     display_size = image_helper.display_size(1024)
     setupInfo = image_helper.setup_info()
     sensorInfo = setupInfo.SensorInfo
+
+    # instantiate lenDistortion
+    num_cam = image_helper.num_cam()
+    lens_distortion = []
+    for cam_idx in range(num_cam):
+        lens_distortion.append(LensDistortion(cam_idx, None, args.cal_dir))
 
     center = np.array([sensorInfo.width / 2, sensorInfo.height / 2])
 
@@ -79,7 +85,13 @@ def compute_magnification(args=None, delta_shift=0):
         for k in range(num_data):
             for cam_idx in range(image_helper.num_cam()):
                 filename = setupInfo.CalibMagInfo.input_image_filename[k, cam_idx]
-                img, gray = image_helper.read_image_file(cam_idx, 0, scale_to_8bit=True, file_name=filename)
+                img_tmp, gray_tmp = image_helper.read_image_file(cam_idx, 0, scale_to_8bit=False, file_name=filename)
+                if img_tmp is None:
+                    all_files_read = True
+                    break
+                img = lens_distortion[cam_idx].correct_vignetting(img_tmp, None, apply_flag=True, alpha=0.7, scale_to_8bit=True)
+                gray = lens_distortion[cam_idx].correct_vignetting(gray_tmp, None, apply_flag=True, alpha=0.7, scale_to_8bit=True)
+
                 print("Searching")
                 ret, corners = cv2.findChessboardCornersSB(img, (nx, ny), None)
                 if ret:
@@ -99,14 +111,21 @@ def compute_magnification(args=None, delta_shift=0):
                     y_mean = np.mean(
                         imagePoints[start_y + 1:end_y, start_x: end_x, 1] - imagePoints[start_y: end_y - 1, start_x: end_x,
                                                                         1]);
-                    mag_x[k, cam_idx] = x_mean * pixel_size / checker_size_mm;
-                    mag_y[k, cam_idx] = y_mean * pixel_size / checker_size_mm;
+                    factor_x = 1.0;
+                    factor_y = 1.0
+                    if args.fix_slant:
+                        x_stride = np.mean(-imagePoints[start_y:end_y, start_x:end_x-1, 0] + imagePoints[start_y:end_y, start_x+1:end_x, 0])
+                        y_stride = np.mean(-imagePoints[start_y:end_y-1, start_x:end_x, 1] + imagePoints[start_y+1:end_y, start_x:end_x, 1])
+                        delta_y = np.mean(-imagePoints[start_y:end_y, start_x:end_x-1, 1] + imagePoints[start_y:end_y, start_x+1:end_x, 1])
+                        delta_x = np.mean(-imagePoints[start_y:end_y-1, start_x:end_x, 0] + imagePoints[start_y+1:end_y, start_x:end_x, 0])
+                        factor_x = x_stride/math.sqrt(x_stride * x_stride + delta_y * delta_y)
+                        factor_y = y_stride/math.sqrt(y_stride * y_stride + delta_x * delta_x)
+                    mag_x[k, cam_idx] = x_mean * pixel_size / (checker_size_mm * factor_x);
+                    mag_y[k, cam_idx] = y_mean * pixel_size / (checker_size_mm * factor_y);
                     fx[k, cam_idx] = (mag_x[k, cam_idx] / (1 - mag_x[k, cam_idx])) * obj_dist[k, cam_idx];
                     fy[k, cam_idx] = (mag_y[k, cam_idx] / (1 - mag_y[k, cam_idx])) * obj_dist[k, cam_idx];
                     avg_focal_length[k, cam_idx] = (fx[k, cam_idx] / pixel_size + fy[k, cam_idx] / pixel_size) / 2
                     max_focal_length[k, cam_idx] = max(fx[k, cam_idx] / pixel_size, fy[k, cam_idx] / pixel_size)
-                    #print("avg_focal_length:", cam_idx)
-                    #print(avg_focal_length[k, cam_idx])
                 else:
                     print("Chessboard not found")
                     print("ERROR: Chessboard Not detected for all Cameras, Results are Invalid!!!")
@@ -124,9 +143,6 @@ def compute_magnification(args=None, delta_shift=0):
             img2 = cv2.circle(img2, (img2.shape[1] >> 1, img2.shape[0] >> 1), 5, (255, 0, 0), 3)
             cv2.imshow("{}".format(setupInfo.RigInfo.module_name[cam_idx]), img2)
         all_files_read = True
-    #print(mag_x)
-    #print(mag_y)
-    #print(obj_dist)
     print("avg_focal_length:")
     print(avg_focal_length)
     print("Mean:")
@@ -141,6 +157,7 @@ def compute_magnification(args=None, delta_shift=0):
 parser = argparse.ArgumentParser(description="Compute Magnification")
 parser.add_argument('--image_dir', default='Calibration_Aug23')
 parser.add_argument('--cal_dir', default='Calibration_Aug23')
+parser.add_argument('--fix_slant', action="store_true", default=False, help='use this option to account for any slant in the checkerboard for magnitude estimation')
 
 args, unknown = parser.parse_known_args()
 if unknown:
@@ -151,6 +168,7 @@ print("delta:")
 print(delta)
 
 #two methiods: (1) take the mean of the three values for the camera or (2) take the highest magnitude
+#delta_new = compute_magnification(args, delta)
 delta_new = compute_magnification(args, np.mean(delta))
 #delta_new = compute_magnification(args, np.max(np.abs(delta)) * np.sign(delta))
 
