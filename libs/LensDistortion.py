@@ -230,6 +230,49 @@ class LensDistortion:
             img = (img >> 8).astype(np.uint8)
         return img
 
+    def asic_vignetting_map(self, pixel_quad_decimate=16, pixel_offset=True, alpha=1.0):
+        decimate = 2 * pixel_quad_decimate
+
+        # Decimate and extrapolate
+        ny, nx, _ = self.__lens_shade_filter.shape
+        x = np.arange(nx)
+        y = np.arange(ny)
+        vig = self.__lens_shade_filter[:, :, 0].copy() * alpha
+        f = scipy.interpolate.RegularGridInterpolator((y, x), vig,
+                                                       method='linear', bounds_error=False, fill_value=None)
+
+        dx = math.ceil(nx / decimate)
+        dy = math.ceil(ny / decimate)
+        y, x = np.meshgrid(np.arange(dy + 1), np.arange(dx + 1), indexing='ij')
+        pts = np.array([y.reshape(-1), x.reshape(-1)]).T.astype(np.float64) * decimate
+        if pixel_offset:
+            pts += np.array([0.5, 0.5])
+        #asic_vig_map = np.empty((dy+1, dx+1))
+        asic_vig_map = f(pts).reshape(dy + 1, dx + 1)
+        return asic_vig_map
+
+    def set_asic_vignetting(self, asic_vig_map, img_size, pixel_offset=True):
+        nx = img_size[0]
+        ny = img_size[1]
+        dy, dx = asic_vig_map.shape
+        decimate = math.ceil(nx / (dx - 1))
+
+        x = np.arange(dx, dtype=np.float64) * decimate
+        y = np.arange(dy, dtype=np.float64) * decimate
+        if pixel_offset:
+            x += 0.5
+            y += 0.5
+        f = scipy.interpolate.RegularGridInterpolator((y, x), asic_vig_map[:, :], method='linear',
+                                                       bounds_error=False, fill_value=None)
+
+        y, x = np.meshgrid(np.arange(ny), np.arange(nx), indexing='ij')
+        pts = np.array([y.reshape(-1), x.reshape(-1)]).T
+        self.__lens_shade_filter = np.empty((ny, nx, 3), dtype=np.float32)
+        self.__lens_shade_filter[:, :, 0] = f(pts).reshape(ny, nx)
+        self.__lens_shade_filter[:, :, 1] = self.__lens_shade_filter[:, :, 0]
+        self.__lens_shade_filter[:, :, 2] = self.__lens_shade_filter[:, :, 0]
+        return
+
     def correct_distortion_points(self, pts):
         m, n, _ = self.__dist_map.shape
         x = np.arange(n)
