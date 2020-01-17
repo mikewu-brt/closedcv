@@ -93,7 +93,7 @@ def compute_magnification(args=None, delta_shift=0):
                 gray = lens_distortion[cam_idx].correct_vignetting(gray_tmp, None, apply_flag=True, alpha=0.7, scale_to_8bit=True)
 
                 print("Searching")
-                ret, corners = cv2.findChessboardCornersSB(img, (nx, ny), None)
+                ret, corners = cv2.findChessboardCornersSB(img, (nx, ny), flags=cv2.CALIB_CB_NORMALIZE_IMAGE)
                 if ret:
                     print("Chessboard Found")
                     corners = corners[::-1]  # reverse the array
