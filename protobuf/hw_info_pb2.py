@@ -20,7 +20,7 @@ DESCRIPTOR = _descriptor.FileDescriptor(
   package='ltpb',
   syntax='proto3',
   serialized_options=None,
-  serialized_pb=b'\n\rhw_info.proto\x12\x04ltpb\x1a\x11sensor_type.proto\x1a\x0f\x63\x61mera_id.proto\"\xac\x08\n\x12\x43\x61meraModuleHwInfo\x12\x1a\n\x02id\x18\x01 \x01(\x0e\x32\x0e.ltpb.CameraID\x12 \n\x06sensor\x18\x02 \x01(\x0e\x32\x10.ltpb.SensorType\x12/\n\x04lens\x18\x03 \x01(\x0e\x32!.ltpb.CameraModuleHwInfo.LensType\x12\x44\n\x0fmirror_actuator\x18\x04 \x01(\x0e\x32+.ltpb.CameraModuleHwInfo.MirrorActuatorType\x12\x33\n\x06mirror\x18\x05 \x01(\x0e\x32#.ltpb.CameraModuleHwInfo.MirrorType\x12\x17\n\x0f\x66ocal_length_mm\x18\x06 \x01(\x02\x12 \n\x16\x66ocal_length_temp_degc\x18\x07 \x01(\x02H\x00\x12(\n\x1e\x66ocal_length_slope_mm_per_degc\x18\x08 \x01(\x02H\x01\x12\x15\n\rpixel_size_mm\x18\t \x01(\x02\x12\x13\n\x0bsensor_uuid\x18\n \x01(\x04\x12\x15\n\rserial_number\x18\x0b \x01(\t\x12\x14\n\x0cmanufacturer\x18\x0c \x01(\t\"\x9c\x02\n\x08LensType\x12\x10\n\x0cLENS_UNKNOWN\x10\x00\x12\x0f\n\x0bLENS_SHOWIN\x10\x01\x12\x0f\n\x0bLENS_LARGAN\x10\x02\x12\x0e\n\nLENS_SUNNY\x10\x03\x12\x11\n\rLENS_KANTATSU\x10\x04\x12\x16\n\x12LENS_OFILM_60068A1\x10\x05\x12\x15\n\x11LENS_SEMCO_202SVA\x10\x06\x12\x15\n\x11LENS_SEMCO_162SVA\x10\x07\x12\x17\n\x13LENS_LARGAN_70013A1\x10\x08\x12\x1b\n\x17LENS_COMPUTAR_V2528_MPY\x10\t\x12\x1b\n\x17LENS_COMPUTAR_V3528_MPY\x10\n\x12 \n\x1cLENS_IMAGING_SOURCE_TPL_1220\x10\x0b\"^\n\x10LensActuatorType\x12\x19\n\x15LENS_ACTUATOR_UNKNOWN\x10\x00\x12\x18\n\x14LENS_ACTUATOR_SHICOH\x10\x01\x12\x15\n\x11LENS_ACTUATOR_PZT\x10\x02\"J\n\x12MirrorActuatorType\x12\x1b\n\x17MIRROR_ACTUATOR_UNKNOWN\x10\x00\x12\x17\n\x13MIRROR_ACTUATOR_PZT\x10\x01\"U\n\nMirrorType\x12\x12\n\x0eMIRROR_UNKNOWN\x10\x00\x12\x19\n\x15MIRROR_DIELECTRIC_SNX\x10\x01\x12\x18\n\x14MIRROR_SILVER_ZUISHO\x10\x02\x42!\n\x1foptional_focal_length_temp_degcB)\n\'optional_focal_length_slope_mm_per_degc\"w\n\x0fImuModuleHwInfo\x12\x11\n\tdevice_id\x18\x01 \x01(\x04\x12\x13\n\x0blocation_id\x18\x02 \x01(\r\x12\x14\n\x0cmanufacturer\x18\x03 \x01(\t\x12\x12\n\nproduct_id\x18\x04 \x01(\t\x12\x12\n\nfw_version\x18\x05 \x01(\t\"\xa8\x02\n\x06HwInfo\x12(\n\x06\x63\x61mera\x18\x01 \x03(\x0b\x32\x18.ltpb.CameraModuleHwInfo\x12%\n\x05\x66lash\x18\x02 \x01(\x0e\x32\x16.ltpb.HwInfo.FlashType\x12!\n\x03tof\x18\x03 \x01(\x0e\x32\x14.ltpb.HwInfo.ToFType\x12\x14\n\x0cmanufacturer\x18\x05 \x01(\t\x12\"\n\x03imu\x18\x06 \x03(\x0b\x32\x15.ltpb.ImuModuleHwInfo\"6\n\tFlashType\x12\x11\n\rFLASH_UNKNOWN\x10\x00\x12\x16\n\x12\x46LASH_OSRAM_CBLPM1\x10\x01\"2\n\x07ToFType\x12\x0f\n\x0bTOF_UNKNOWN\x10\x00\x12\x16\n\x12TOF_STMICRO_VL53L0\x10\x01J\x04\x08\x04\x10\x05\x62\x06proto3'
+  serialized_pb=b'\n\rhw_info.proto\x12\x04ltpb\x1a\x11sensor_type.proto\x1a\x0f\x63\x61mera_id.proto\"\xac\x08\n\x12\x43\x61meraModuleHwInfo\x12\x1a\n\x02id\x18\x01 \x01(\x0e\x32\x0e.ltpb.CameraID\x12 \n\x06sensor\x18\x02 \x01(\x0e\x32\x10.ltpb.SensorType\x12/\n\x04lens\x18\x03 \x01(\x0e\x32!.ltpb.CameraModuleHwInfo.LensType\x12\x44\n\x0fmirror_actuator\x18\x04 \x01(\x0e\x32+.ltpb.CameraModuleHwInfo.MirrorActuatorType\x12\x33\n\x06mirror\x18\x05 \x01(\x0e\x32#.ltpb.CameraModuleHwInfo.MirrorType\x12\x17\n\x0f\x66ocal_length_mm\x18\x06 \x01(\x02\x12 \n\x16\x66ocal_length_temp_degc\x18\x07 \x01(\x02H\x00\x12(\n\x1e\x66ocal_length_slope_mm_per_degc\x18\x08 \x01(\x02H\x01\x12\x15\n\rpixel_size_mm\x18\t \x01(\x02\x12\x13\n\x0bsensor_uuid\x18\n \x01(\x04\x12\x15\n\rserial_number\x18\x0b \x01(\t\x12\x14\n\x0cmanufacturer\x18\x0c \x01(\t\"\x9c\x02\n\x08LensType\x12\x10\n\x0cLENS_UNKNOWN\x10\x00\x12\x0f\n\x0bLENS_SHOWIN\x10\x01\x12\x0f\n\x0bLENS_LARGAN\x10\x02\x12\x0e\n\nLENS_SUNNY\x10\x03\x12\x11\n\rLENS_KANTATSU\x10\x04\x12\x16\n\x12LENS_OFILM_60068A1\x10\x05\x12\x15\n\x11LENS_SEMCO_202SVA\x10\x06\x12\x15\n\x11LENS_SEMCO_162SVA\x10\x07\x12\x17\n\x13LENS_LARGAN_70013A1\x10\x08\x12\x1b\n\x17LENS_COMPUTAR_V2528_MPY\x10\t\x12\x1b\n\x17LENS_COMPUTAR_V3528_MPY\x10\n\x12 \n\x1cLENS_IMAGING_SOURCE_TPL_1220\x10\x0b\"^\n\x10LensActuatorType\x12\x19\n\x15LENS_ACTUATOR_UNKNOWN\x10\x00\x12\x18\n\x14LENS_ACTUATOR_SHICOH\x10\x01\x12\x15\n\x11LENS_ACTUATOR_PZT\x10\x02\"J\n\x12MirrorActuatorType\x12\x1b\n\x17MIRROR_ACTUATOR_UNKNOWN\x10\x00\x12\x17\n\x13MIRROR_ACTUATOR_PZT\x10\x01\"U\n\nMirrorType\x12\x12\n\x0eMIRROR_UNKNOWN\x10\x00\x12\x19\n\x15MIRROR_DIELECTRIC_SNX\x10\x01\x12\x18\n\x14MIRROR_SILVER_ZUISHO\x10\x02\x42!\n\x1foptional_focal_length_temp_degcB)\n\'optional_focal_length_slope_mm_per_degc\"w\n\x0fImuModuleHwInfo\x12\x11\n\tdevice_id\x18\x01 \x01(\x04\x12\x13\n\x0blocation_id\x18\x02 \x01(\r\x12\x14\n\x0cmanufacturer\x18\x03 \x01(\t\x12\x12\n\nproduct_id\x18\x04 \x01(\t\x12\x12\n\nfw_version\x18\x05 \x01(\t\"\xc9\x02\n\x06HwInfo\x12(\n\x06\x63\x61mera\x18\x01 \x03(\x0b\x32\x18.ltpb.CameraModuleHwInfo\x12%\n\x05\x66lash\x18\x02 \x01(\x0e\x32\x16.ltpb.HwInfo.FlashType\x12!\n\x03tof\x18\x03 \x01(\x0e\x32\x14.ltpb.HwInfo.ToFType\x12\x14\n\x0cmanufacturer\x18\x05 \x01(\t\x12\"\n\x03imu\x18\x06 \x03(\x0b\x32\x15.ltpb.ImuModuleHwInfo\x12\x1f\n\x17geometric_calib_version\x18\x07 \x01(\t\"6\n\tFlashType\x12\x11\n\rFLASH_UNKNOWN\x10\x00\x12\x16\n\x12\x46LASH_OSRAM_CBLPM1\x10\x01\"2\n\x07ToFType\x12\x0f\n\x0bTOF_UNKNOWN\x10\x00\x12\x16\n\x12TOF_STMICRO_VL53L0\x10\x01J\x04\x08\x04\x10\x05\x62\x06proto3'
   ,
   dependencies=[sensor__type__pb2.DESCRIPTOR,camera__id__pb2.DESCRIPTOR,])
 
@@ -179,8 +179,8 @@ _HWINFO_FLASHTYPE = _descriptor.EnumDescriptor(
   ],
   containing_type=None,
   serialized_options=None,
-  serialized_start=1436,
-  serialized_end=1490,
+  serialized_start=1469,
+  serialized_end=1523,
 )
 _sym_db.RegisterEnumDescriptor(_HWINFO_FLASHTYPE)
 
@@ -201,8 +201,8 @@ _HWINFO_TOFTYPE = _descriptor.EnumDescriptor(
   ],
   containing_type=None,
   serialized_options=None,
-  serialized_start=1492,
-  serialized_end=1542,
+  serialized_start=1525,
+  serialized_end=1575,
 )
 _sym_db.RegisterEnumDescriptor(_HWINFO_TOFTYPE)
 
@@ -426,6 +426,13 @@ _HWINFO = _descriptor.Descriptor(
       message_type=None, enum_type=None, containing_type=None,
       is_extension=False, extension_scope=None,
       serialized_options=None, file=DESCRIPTOR),
+    _descriptor.FieldDescriptor(
+      name='geometric_calib_version', full_name='ltpb.HwInfo.geometric_calib_version', index=5,
+      number=7, type=9, cpp_type=9, label=1,
+      has_default_value=False, default_value=b"".decode('utf-8'),
+      message_type=None, enum_type=None, containing_type=None,
+      is_extension=False, extension_scope=None,
+      serialized_options=None, file=DESCRIPTOR),
   ],
   extensions=[
   ],
@@ -441,7 +448,7 @@ _HWINFO = _descriptor.Descriptor(
   oneofs=[
   ],
   serialized_start=1252,
-  serialized_end=1548,
+  serialized_end=1581,
 )
 
 _CAMERAMODULEHWINFO.fields_by_name['id'].enum_type = camera__id__pb2._CAMERAID

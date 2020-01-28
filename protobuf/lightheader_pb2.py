@@ -25,8 +25,9 @@ import flash_calibration_pb2 as flash__calibration__pb2
 import hw_info_pb2 as hw__info__pb2
 import view_preferences_pb2 as view__preferences__pb2
 import proximity_sensors_pb2 as proximity__sensors__pb2
+import imu_data_legacy_pb2 as imu__data__legacy__pb2
 import imu_data_pb2 as imu__data__pb2
-import imu_pb2 as imu__pb2
+import gps_data_legacy_pb2 as gps__data__legacy__pb2
 import gps_data_pb2 as gps__data__pb2
 import face_data_pb2 as face__data__pb2
 import matrix3x3f_pb2 as matrix3x3f__pb2
@@ -37,9 +38,9 @@ DESCRIPTOR = _descriptor.FileDescriptor(
   package='ltpb',
   syntax='proto3',
   serialized_options=None,
-  serialized_pb=b'\n\x11lightheader.proto\x12\x04ltpb\x1a\x13\x63\x61mera_module.proto\x1a\x0f\x63\x61mera_id.proto\x1a\x10time_stamp.proto\x1a\x1bgeometric_calibration.proto\x1a\x17\x63olor_calibration.proto\x1a!vignetting_characterization.proto\x1a\x13hot_pixel_map.proto\x1a\x11\x64\x65vice_temp.proto\x1a\x14\x64\x65\x61\x64_pixel_map.proto\x1a\x15tof_calibration.proto\x1a\x17\x66lash_calibration.proto\x1a\rhw_info.proto\x1a\x16view_preferences.proto\x1a\x17proximity_sensors.proto\x1a\x0eimu_data.proto\x1a\timu.proto\x1a\x0egps_data.proto\x1a\x0f\x66\x61\x63\x65_data.proto\x1a\x10matrix3x3f.proto\"\x89\x01\n\x18\x46\x61\x63toryDeviceCalibration\x12%\n\x05\x66lash\x18\x01 \x01(\x0b\x32\x16.ltpb.FlashCalibration\x12!\n\x03tof\x18\x02 \x01(\x0b\x32\x14.ltpb.ToFCalibration\x12#\n\ntime_stamp\x18\x03 \x01(\x0b\x32\x0f.ltpb.TimeStamp\"\xc3\x02\n\x18\x46\x61\x63toryModuleCalibration\x12!\n\tcamera_id\x18\x01 \x01(\x0e\x32\x0e.ltpb.CameraID\x12%\n\x05\x63olor\x18\x02 \x03(\x0b\x32\x16.ltpb.ColorCalibration\x12,\n\x08geometry\x18\x03 \x01(\x0b\x32\x1a.ltpb.GeometricCalibration\x12\x34\n\nvignetting\x18\x04 \x01(\x0b\x32 .ltpb.VignettingCharacterization\x12(\n\rhot_pixel_map\x18\x05 \x01(\x0b\x32\x11.ltpb.HotPixelMap\x12*\n\x0e\x64\x65\x61\x64_pixel_map\x18\x06 \x01(\x0b\x32\x12.ltpb.DeadPixelMap\x12#\n\ntime_stamp\x18\x07 \x01(\x0b\x32\x0f.ltpb.TimeStamp\"\x84\x01\n\x14\x43olorCalibrationGold\x12!\n\tcamera_id\x18\x01 \x01(\x0e\x32\x0e.ltpb.CameraID\x12$\n\x04\x64\x61ta\x18\x02 \x03(\x0b\x32\x16.ltpb.ColorCalibration\x12#\n\ntime_stamp\x18\x03 \x01(\x0b\x32\x0f.ltpb.TimeStamp\"\xbd\x01\n\tFlashData\x12\"\n\x04mode\x18\x01 \x01(\x0e\x32\x14.ltpb.FlashData.Mode\x12\x17\n\x0fledcool_current\x18\x02 \x01(\r\x12\x17\n\x0fledwarm_current\x18\x03 \x01(\r\x12\x16\n\x0e\x66lash_duration\x18\x04 \x01(\r\x12\x17\n\x0foffset_duration\x18\x05 \x01(\x05\")\n\x04Mode\x12\x0b\n\x07NOFLASH\x10\x00\x12\t\n\x05\x46LASH\x10\x01\x12\t\n\x05TORCH\x10\x02\"\xcb\x02\n\x0b\x41\x46\x44\x65\x62ugInfo\x12\x16\n\x0e\x66ocus_achieved\x18\x01 \x01(\x08\x12\x1a\n\x12image_focal_length\x18\x02 \x01(\x05\x12\x36\n\x0e\x61\x66_trigger_src\x18\x03 \x01(\x0e\x32\x1e.ltpb.AFDebugInfo.AFTriggerSrc\"\xcf\x01\n\x0c\x41\x46TriggerSrc\x12\x12\n\x0eLEGACY_UNKNOWN\x10\x00\x12\x0c\n\x08START_UP\x10\x01\x12\x0f\n\x0b\x46\x41\x43\x45_DETECT\x10\x02\x12\x11\n\rMOTION_DETECT\x10\x03\x12\x14\n\x10ZOOM_MODE_CHANGE\x10\x04\x12\x0c\n\x08USER_TAP\x10\x05\x12\x12\n\x0eHW_SHORT_PRESS\x10\x06\x12\x08\n\x04TEST\x10\x07\x12\x13\n\x0fUSER_TAP_N_HOLD\x10\x08\x12\x11\n\rHW_LONG_PRESS\x10\t\x12\x0f\n\x0bPRE_CAPTURE\x10\n\"2\n\rCompatibility\x12\x0f\n\x07version\x18\x01 \x01(\r\x12\x10\n\x08\x66\x65\x61tures\x18\x02 \x03(\t\"\xbd\x01\n\x10LensShadingModel\x12\r\n\x05width\x18\x01 \x01(\r\x12\x0e\n\x06height\x18\x02 \x01(\r\x12\x10\n\x04\x64\x61ta\x18\x03 \x03(\x02\x42\x02\x10\x01\x12G\n\x19lens_shading_model_source\x18\x04 \x01(\x0e\x32$.ltpb.LensShadingModel.LSModelSource\"/\n\rLSModelSource\x12\x07\n\x03\x42PS\x10\x00\x12\x07\n\x03IFE\x10\x01\x12\x0c\n\x08RESERVED\x10\x02\"C\n\x15\x43olorCorrectionMatrix\x12\x0b\n\x03\x63\x63t\x18\x01 \x01(\x02\x12\x1d\n\x03\x63\x63m\x18\x02 \x01(\x0b\x32\x10.ltpb.Matrix3x3F\"\xfd\t\n\x0bLightHeader\x12\x1b\n\x13image_unique_id_low\x18\x01 \x01(\x04\x12\x1c\n\x14image_unique_id_high\x18\x02 \x01(\x04\x12)\n\x10image_time_stamp\x18\x03 \x01(\x0b\x32\x0f.ltpb.TimeStamp\x12\x1a\n\x12image_focal_length\x18\x04 \x01(\x05\x12\x30\n\x16image_reference_camera\x18\x05 \x01(\x0e\x32\x0e.ltpb.CameraIDH\x00\x12\x1c\n\x14\x64\x65vice_unique_id_low\x18\x06 \x01(\x04\x12\x1d\n\x15\x64\x65vice_unique_id_high\x18\x07 \x01(\x04\x12\x19\n\x11\x64\x65vice_model_name\x18\x08 \x01(\t\x12\x19\n\x11\x64\x65vice_fw_version\x18\t \x01(\t\x12\x1e\n\x16\x64\x65vice_asic_fw_version\x18\n \x01(\t\x12,\n\x12\x64\x65vice_temperature\x18\x0b \x01(\x0b\x32\x10.ltpb.DeviceTemp\x12#\n\x07modules\x18\x0c \x03(\x0b\x32\x12.ltpb.CameraModule\x12:\n\x12module_calibration\x18\r \x03(\x0b\x32\x1e.ltpb.FactoryModuleCalibration\x12:\n\x12\x64\x65vice_calibration\x18\x0e \x01(\x0b\x32\x1e.ltpb.FactoryDeviceCalibration\x12+\n\x07gold_cc\x18\x0f \x03(\x0b\x32\x1a.ltpb.ColorCalibrationGold\x12\x11\n\ttof_range\x18\x11 \x01(\x02\x12\x1d\n\x07hw_info\x18\x12 \x01(\x0b\x32\x0c.ltpb.HwInfo\x12/\n\x10view_preferences\x18\x13 \x01(\x0b\x32\x15.ltpb.ViewPreferences\x12\x31\n\x11proximity_sensors\x18\x14 \x01(\x0b\x32\x16.ltpb.ProximitySensors\x12#\n\nflash_data\x18\x16 \x01(\x0b\x32\x0f.ltpb.FlashData\x12\x1f\n\x08imu_data\x18\x17 \x03(\x0b\x32\r.ltpb.IMUData\x12\"\n\x07\x61\x66_info\x18\x18 \x01(\x0b\x32\x11.ltpb.AFDebugInfo\x12\x1f\n\x08gps_data\x18\x19 \x01(\x0b\x32\r.ltpb.GPSData\x12*\n\rcompatibility\x18\x1a \x01(\x0b\x32\x13.ltpb.Compatibility\x12!\n\tface_data\x18\x1b \x03(\x0b\x32\x0e.ltpb.FaceData\x12(\n\x08lsc_data\x18\x1c \x03(\x0b\x32\x16.ltpb.LensShadingModel\x12-\n\x08\x63\x63m_data\x18\x1d \x01(\x0b\x32\x1b.ltpb.ColorCorrectionMatrix\x12\x33\n\x0c\x64\x65vice_model\x18\x1e \x01(\x0e\x32\x1d.ltpb.LightHeader.DeviceModel\x12$\n\x0bimu_samples\x18\x1f \x03(\x0b\x32\x0f.ltpb.ImuSample\"\\\n\x0b\x44\x65viceModel\x12\x0f\n\x0bUNSPECIFIED\x10\x00\x12\x0b\n\x07GENERIC\x10\x01\x12\x07\n\x03L16\x10\x02\x12\x07\n\x03\x46L5\x10\x03\x12\r\n\tORION_POC\x10\x04\x12\x0e\n\nORION_MPA1\x10\x05\x42!\n\x1foptional_image_reference_cameraJ\x04\x08\x10\x10\x11J\x04\x08\x15\x10\x16\x62\x06proto3'
+  serialized_pb=b'\n\x11lightheader.proto\x12\x04ltpb\x1a\x13\x63\x61mera_module.proto\x1a\x0f\x63\x61mera_id.proto\x1a\x10time_stamp.proto\x1a\x1bgeometric_calibration.proto\x1a\x17\x63olor_calibration.proto\x1a!vignetting_characterization.proto\x1a\x13hot_pixel_map.proto\x1a\x11\x64\x65vice_temp.proto\x1a\x14\x64\x65\x61\x64_pixel_map.proto\x1a\x15tof_calibration.proto\x1a\x17\x66lash_calibration.proto\x1a\rhw_info.proto\x1a\x16view_preferences.proto\x1a\x17proximity_sensors.proto\x1a\x15imu_data_legacy.proto\x1a\x0eimu_data.proto\x1a\x15gps_data_legacy.proto\x1a\x0egps_data.proto\x1a\x0f\x66\x61\x63\x65_data.proto\x1a\x10matrix3x3f.proto\"\x89\x01\n\x18\x46\x61\x63toryDeviceCalibration\x12%\n\x05\x66lash\x18\x01 \x01(\x0b\x32\x16.ltpb.FlashCalibration\x12!\n\x03tof\x18\x02 \x01(\x0b\x32\x14.ltpb.ToFCalibration\x12#\n\ntime_stamp\x18\x03 \x01(\x0b\x32\x0f.ltpb.TimeStamp\"\xc3\x02\n\x18\x46\x61\x63toryModuleCalibration\x12!\n\tcamera_id\x18\x01 \x01(\x0e\x32\x0e.ltpb.CameraID\x12%\n\x05\x63olor\x18\x02 \x03(\x0b\x32\x16.ltpb.ColorCalibration\x12,\n\x08geometry\x18\x03 \x01(\x0b\x32\x1a.ltpb.GeometricCalibration\x12\x34\n\nvignetting\x18\x04 \x01(\x0b\x32 .ltpb.VignettingCharacterization\x12(\n\rhot_pixel_map\x18\x05 \x01(\x0b\x32\x11.ltpb.HotPixelMap\x12*\n\x0e\x64\x65\x61\x64_pixel_map\x18\x06 \x01(\x0b\x32\x12.ltpb.DeadPixelMap\x12#\n\ntime_stamp\x18\x07 \x01(\x0b\x32\x0f.ltpb.TimeStamp\"\x84\x01\n\x14\x43olorCalibrationGold\x12!\n\tcamera_id\x18\x01 \x01(\x0e\x32\x0e.ltpb.CameraID\x12$\n\x04\x64\x61ta\x18\x02 \x03(\x0b\x32\x16.ltpb.ColorCalibration\x12#\n\ntime_stamp\x18\x03 \x01(\x0b\x32\x0f.ltpb.TimeStamp\"\xbd\x01\n\tFlashData\x12\"\n\x04mode\x18\x01 \x01(\x0e\x32\x14.ltpb.FlashData.Mode\x12\x17\n\x0fledcool_current\x18\x02 \x01(\r\x12\x17\n\x0fledwarm_current\x18\x03 \x01(\r\x12\x16\n\x0e\x66lash_duration\x18\x04 \x01(\r\x12\x17\n\x0foffset_duration\x18\x05 \x01(\x05\")\n\x04Mode\x12\x0b\n\x07NOFLASH\x10\x00\x12\t\n\x05\x46LASH\x10\x01\x12\t\n\x05TORCH\x10\x02\"\xcb\x02\n\x0b\x41\x46\x44\x65\x62ugInfo\x12\x16\n\x0e\x66ocus_achieved\x18\x01 \x01(\x08\x12\x1a\n\x12image_focal_length\x18\x02 \x01(\x05\x12\x36\n\x0e\x61\x66_trigger_src\x18\x03 \x01(\x0e\x32\x1e.ltpb.AFDebugInfo.AFTriggerSrc\"\xcf\x01\n\x0c\x41\x46TriggerSrc\x12\x12\n\x0eLEGACY_UNKNOWN\x10\x00\x12\x0c\n\x08START_UP\x10\x01\x12\x0f\n\x0b\x46\x41\x43\x45_DETECT\x10\x02\x12\x11\n\rMOTION_DETECT\x10\x03\x12\x14\n\x10ZOOM_MODE_CHANGE\x10\x04\x12\x0c\n\x08USER_TAP\x10\x05\x12\x12\n\x0eHW_SHORT_PRESS\x10\x06\x12\x08\n\x04TEST\x10\x07\x12\x13\n\x0fUSER_TAP_N_HOLD\x10\x08\x12\x11\n\rHW_LONG_PRESS\x10\t\x12\x0f\n\x0bPRE_CAPTURE\x10\n\"2\n\rCompatibility\x12\x0f\n\x07version\x18\x01 \x01(\r\x12\x10\n\x08\x66\x65\x61tures\x18\x02 \x03(\t\"\xbd\x01\n\x10LensShadingModel\x12\r\n\x05width\x18\x01 \x01(\r\x12\x0e\n\x06height\x18\x02 \x01(\r\x12\x10\n\x04\x64\x61ta\x18\x03 \x03(\x02\x42\x02\x10\x01\x12G\n\x19lens_shading_model_source\x18\x04 \x01(\x0e\x32$.ltpb.LensShadingModel.LSModelSource\"/\n\rLSModelSource\x12\x07\n\x03\x42PS\x10\x00\x12\x07\n\x03IFE\x10\x01\x12\x0c\n\x08RESERVED\x10\x02\"C\n\x15\x43olorCorrectionMatrix\x12\x0b\n\x03\x63\x63t\x18\x01 \x01(\x02\x12\x1d\n\x03\x63\x63m\x18\x02 \x01(\x0b\x32\x10.ltpb.Matrix3x3F\"\xb3\n\n\x0bLightHeader\x12\x1b\n\x13image_unique_id_low\x18\x01 \x01(\x04\x12\x1c\n\x14image_unique_id_high\x18\x02 \x01(\x04\x12)\n\x10image_time_stamp\x18\x03 \x01(\x0b\x32\x0f.ltpb.TimeStamp\x12\x1a\n\x12image_focal_length\x18\x04 \x01(\x05\x12\x30\n\x16image_reference_camera\x18\x05 \x01(\x0e\x32\x0e.ltpb.CameraIDH\x00\x12\x1c\n\x14\x64\x65vice_unique_id_low\x18\x06 \x01(\x04\x12\x1d\n\x15\x64\x65vice_unique_id_high\x18\x07 \x01(\x04\x12\x19\n\x11\x64\x65vice_model_name\x18\x08 \x01(\t\x12\x19\n\x11\x64\x65vice_fw_version\x18\t \x01(\t\x12\x1e\n\x16\x64\x65vice_asic_fw_version\x18\n \x01(\t\x12,\n\x12\x64\x65vice_temperature\x18\x0b \x01(\x0b\x32\x10.ltpb.DeviceTemp\x12#\n\x07modules\x18\x0c \x03(\x0b\x32\x12.ltpb.CameraModule\x12:\n\x12module_calibration\x18\r \x03(\x0b\x32\x1e.ltpb.FactoryModuleCalibration\x12:\n\x12\x64\x65vice_calibration\x18\x0e \x01(\x0b\x32\x1e.ltpb.FactoryDeviceCalibration\x12+\n\x07gold_cc\x18\x0f \x03(\x0b\x32\x1a.ltpb.ColorCalibrationGold\x12\x11\n\ttof_range\x18\x11 \x01(\x02\x12\x1d\n\x07hw_info\x18\x12 \x01(\x0b\x32\x0c.ltpb.HwInfo\x12/\n\x10view_preferences\x18\x13 \x01(\x0b\x32\x15.ltpb.ViewPreferences\x12\x31\n\x11proximity_sensors\x18\x14 \x01(\x0b\x32\x16.ltpb.ProximitySensors\x12#\n\nflash_data\x18\x16 \x01(\x0b\x32\x0f.ltpb.FlashData\x12,\n\x0fimu_data_legacy\x18\x17 \x03(\x0b\x32\x13.ltpb.IMUDataLegacy\x12\"\n\x07\x61\x66_info\x18\x18 \x01(\x0b\x32\x11.ltpb.AFDebugInfo\x12,\n\x0fgps_data_legacy\x18\x19 \x01(\x0b\x32\x13.ltpb.GPSDataLegacy\x12*\n\rcompatibility\x18\x1a \x01(\x0b\x32\x13.ltpb.Compatibility\x12!\n\tface_data\x18\x1b \x03(\x0b\x32\x0e.ltpb.FaceData\x12(\n\x08lsc_data\x18\x1c \x03(\x0b\x32\x16.ltpb.LensShadingModel\x12-\n\x08\x63\x63m_data\x18\x1d \x01(\x0b\x32\x1b.ltpb.ColorCorrectionMatrix\x12\x33\n\x0c\x64\x65vice_model\x18\x1e \x01(\x0e\x32\x1d.ltpb.LightHeader.DeviceModel\x12\x1f\n\x08imu_data\x18\x1f \x03(\x0b\x32\r.ltpb.IMUData\x12\x1f\n\x08gps_data\x18  \x01(\x0b\x32\r.ltpb.GPSData\"\\\n\x0b\x44\x65viceModel\x12\x0f\n\x0bUNSPECIFIED\x10\x00\x12\x0b\n\x07GENERIC\x10\x01\x12\x07\n\x03L16\x10\x02\x12\x07\n\x03\x46L5\x10\x03\x12\r\n\tORION_POC\x10\x04\x12\x0e\n\nORION_MPA1\x10\x05\x42!\n\x1foptional_image_reference_cameraJ\x04\x08\x10\x10\x11J\x04\x08\x15\x10\x16\x62\x06proto3'
   ,
-  dependencies=[camera__module__pb2.DESCRIPTOR,camera__id__pb2.DESCRIPTOR,time__stamp__pb2.DESCRIPTOR,geometric__calibration__pb2.DESCRIPTOR,color__calibration__pb2.DESCRIPTOR,vignetting__characterization__pb2.DESCRIPTOR,hot__pixel__map__pb2.DESCRIPTOR,device__temp__pb2.DESCRIPTOR,dead__pixel__map__pb2.DESCRIPTOR,tof__calibration__pb2.DESCRIPTOR,flash__calibration__pb2.DESCRIPTOR,hw__info__pb2.DESCRIPTOR,view__preferences__pb2.DESCRIPTOR,proximity__sensors__pb2.DESCRIPTOR,imu__data__pb2.DESCRIPTOR,imu__pb2.DESCRIPTOR,gps__data__pb2.DESCRIPTOR,face__data__pb2.DESCRIPTOR,matrix3x3f__pb2.DESCRIPTOR,])
+  dependencies=[camera__module__pb2.DESCRIPTOR,camera__id__pb2.DESCRIPTOR,time__stamp__pb2.DESCRIPTOR,geometric__calibration__pb2.DESCRIPTOR,color__calibration__pb2.DESCRIPTOR,vignetting__characterization__pb2.DESCRIPTOR,hot__pixel__map__pb2.DESCRIPTOR,device__temp__pb2.DESCRIPTOR,dead__pixel__map__pb2.DESCRIPTOR,tof__calibration__pb2.DESCRIPTOR,flash__calibration__pb2.DESCRIPTOR,hw__info__pb2.DESCRIPTOR,view__preferences__pb2.DESCRIPTOR,proximity__sensors__pb2.DESCRIPTOR,imu__data__legacy__pb2.DESCRIPTOR,imu__data__pb2.DESCRIPTOR,gps__data__legacy__pb2.DESCRIPTOR,gps__data__pb2.DESCRIPTOR,face__data__pb2.DESCRIPTOR,matrix3x3f__pb2.DESCRIPTOR,])
 
 
 
@@ -64,8 +65,8 @@ _FLASHDATA_MODE = _descriptor.EnumDescriptor(
   ],
   containing_type=None,
   serialized_options=None,
-  serialized_start=1174,
-  serialized_end=1215,
+  serialized_start=1209,
+  serialized_end=1250,
 )
 _sym_db.RegisterEnumDescriptor(_FLASHDATA_MODE)
 
@@ -122,8 +123,8 @@ _AFDEBUGINFO_AFTRIGGERSRC = _descriptor.EnumDescriptor(
   ],
   containing_type=None,
   serialized_options=None,
-  serialized_start=1342,
-  serialized_end=1549,
+  serialized_start=1377,
+  serialized_end=1584,
 )
 _sym_db.RegisterEnumDescriptor(_AFDEBUGINFO_AFTRIGGERSRC)
 
@@ -148,8 +149,8 @@ _LENSSHADINGMODEL_LSMODELSOURCE = _descriptor.EnumDescriptor(
   ],
   containing_type=None,
   serialized_options=None,
-  serialized_start=1746,
-  serialized_end=1793,
+  serialized_start=1781,
+  serialized_end=1828,
 )
 _sym_db.RegisterEnumDescriptor(_LENSSHADINGMODEL_LSMODELSOURCE)
 
@@ -186,8 +187,8 @@ _LIGHTHEADER_DEVICEMODEL = _descriptor.EnumDescriptor(
   ],
   containing_type=None,
   serialized_options=None,
-  serialized_start=3003,
-  serialized_end=3095,
+  serialized_start=3092,
+  serialized_end=3184,
 )
 _sym_db.RegisterEnumDescriptor(_LIGHTHEADER_DEVICEMODEL)
 
@@ -232,8 +233,8 @@ _FACTORYDEVICECALIBRATION = _descriptor.Descriptor(
   extension_ranges=[],
   oneofs=[
   ],
-  serialized_start=425,
-  serialized_end=562,
+  serialized_start=460,
+  serialized_end=597,
 )
 
 
@@ -305,8 +306,8 @@ _FACTORYMODULECALIBRATION = _descriptor.Descriptor(
   extension_ranges=[],
   oneofs=[
   ],
-  serialized_start=565,
-  serialized_end=888,
+  serialized_start=600,
+  serialized_end=923,
 )
 
 
@@ -350,8 +351,8 @@ _COLORCALIBRATIONGOLD = _descriptor.Descriptor(
   extension_ranges=[],
   oneofs=[
   ],
-  serialized_start=891,
-  serialized_end=1023,
+  serialized_start=926,
+  serialized_end=1058,
 )
 
 
@@ -410,8 +411,8 @@ _FLASHDATA = _descriptor.Descriptor(
   extension_ranges=[],
   oneofs=[
   ],
-  serialized_start=1026,
-  serialized_end=1215,
+  serialized_start=1061,
+  serialized_end=1250,
 )
 
 
@@ -456,8 +457,8 @@ _AFDEBUGINFO = _descriptor.Descriptor(
   extension_ranges=[],
   oneofs=[
   ],
-  serialized_start=1218,
-  serialized_end=1549,
+  serialized_start=1253,
+  serialized_end=1584,
 )
 
 
@@ -494,8 +495,8 @@ _COMPATIBILITY = _descriptor.Descriptor(
   extension_ranges=[],
   oneofs=[
   ],
-  serialized_start=1551,
-  serialized_end=1601,
+  serialized_start=1586,
+  serialized_end=1636,
 )
 
 
@@ -547,8 +548,8 @@ _LENSSHADINGMODEL = _descriptor.Descriptor(
   extension_ranges=[],
   oneofs=[
   ],
-  serialized_start=1604,
-  serialized_end=1793,
+  serialized_start=1639,
+  serialized_end=1828,
 )
 
 
@@ -585,8 +586,8 @@ _COLORCORRECTIONMATRIX = _descriptor.Descriptor(
   extension_ranges=[],
   oneofs=[
   ],
-  serialized_start=1795,
-  serialized_end=1862,
+  serialized_start=1830,
+  serialized_end=1897,
 )
 
 
@@ -738,7 +739,7 @@ _LIGHTHEADER = _descriptor.Descriptor(
       is_extension=False, extension_scope=None,
       serialized_options=None, file=DESCRIPTOR),
     _descriptor.FieldDescriptor(
-      name='imu_data', full_name='ltpb.LightHeader.imu_data', index=20,
+      name='imu_data_legacy', full_name='ltpb.LightHeader.imu_data_legacy', index=20,
       number=23, type=11, cpp_type=10, label=3,
       has_default_value=False, default_value=[],
       message_type=None, enum_type=None, containing_type=None,
@@ -752,7 +753,7 @@ _LIGHTHEADER = _descriptor.Descriptor(
       is_extension=False, extension_scope=None,
       serialized_options=None, file=DESCRIPTOR),
     _descriptor.FieldDescriptor(
-      name='gps_data', full_name='ltpb.LightHeader.gps_data', index=22,
+      name='gps_data_legacy', full_name='ltpb.LightHeader.gps_data_legacy', index=22,
       number=25, type=11, cpp_type=10, label=1,
       has_default_value=False, default_value=None,
       message_type=None, enum_type=None, containing_type=None,
@@ -794,9 +795,16 @@ _LIGHTHEADER = _descriptor.Descriptor(
       is_extension=False, extension_scope=None,
       serialized_options=None, file=DESCRIPTOR),
     _descriptor.FieldDescriptor(
-      name='imu_samples', full_name='ltpb.LightHeader.imu_samples', index=28,
+      name='imu_data', full_name='ltpb.LightHeader.imu_data', index=28,
       number=31, type=11, cpp_type=10, label=3,
       has_default_value=False, default_value=[],
+      message_type=None, enum_type=None, containing_type=None,
+      is_extension=False, extension_scope=None,
+      serialized_options=None, file=DESCRIPTOR),
+    _descriptor.FieldDescriptor(
+      name='gps_data', full_name='ltpb.LightHeader.gps_data', index=29,
+      number=32, type=11, cpp_type=10, label=1,
+      has_default_value=False, default_value=None,
       message_type=None, enum_type=None, containing_type=None,
       is_extension=False, extension_scope=None,
       serialized_options=None, file=DESCRIPTOR),
@@ -816,8 +824,8 @@ _LIGHTHEADER = _descriptor.Descriptor(
       name='optional_image_reference_camera', full_name='ltpb.LightHeader.optional_image_reference_camera',
       index=0, containing_type=None, fields=[]),
   ],
-  serialized_start=1865,
-  serialized_end=3142,
+  serialized_start=1900,
+  serialized_end=3231,
 )
 
 _FACTORYDEVICECALIBRATION.fields_by_name['flash'].message_type = flash__calibration__pb2._FLASHCALIBRATION
@@ -851,15 +859,16 @@ _LIGHTHEADER.fields_by_name['hw_info'].message_type = hw__info__pb2._HWINFO
 _LIGHTHEADER.fields_by_name['view_preferences'].message_type = view__preferences__pb2._VIEWPREFERENCES
 _LIGHTHEADER.fields_by_name['proximity_sensors'].message_type = proximity__sensors__pb2._PROXIMITYSENSORS
 _LIGHTHEADER.fields_by_name['flash_data'].message_type = _FLASHDATA
-_LIGHTHEADER.fields_by_name['imu_data'].message_type = imu__data__pb2._IMUDATA
+_LIGHTHEADER.fields_by_name['imu_data_legacy'].message_type = imu__data__legacy__pb2._IMUDATALEGACY
 _LIGHTHEADER.fields_by_name['af_info'].message_type = _AFDEBUGINFO
-_LIGHTHEADER.fields_by_name['gps_data'].message_type = gps__data__pb2._GPSDATA
+_LIGHTHEADER.fields_by_name['gps_data_legacy'].message_type = gps__data__legacy__pb2._GPSDATALEGACY
 _LIGHTHEADER.fields_by_name['compatibility'].message_type = _COMPATIBILITY
 _LIGHTHEADER.fields_by_name['face_data'].message_type = face__data__pb2._FACEDATA
 _LIGHTHEADER.fields_by_name['lsc_data'].message_type = _LENSSHADINGMODEL
 _LIGHTHEADER.fields_by_name['ccm_data'].message_type = _COLORCORRECTIONMATRIX
 _LIGHTHEADER.fields_by_name['device_model'].enum_type = _LIGHTHEADER_DEVICEMODEL
-_LIGHTHEADER.fields_by_name['imu_samples'].message_type = imu__pb2._IMUSAMPLE
+_LIGHTHEADER.fields_by_name['imu_data'].message_type = imu__data__pb2._IMUDATA
+_LIGHTHEADER.fields_by_name['gps_data'].message_type = gps__data__pb2._GPSDATA
 _LIGHTHEADER_DEVICEMODEL.containing_type = _LIGHTHEADER
 _LIGHTHEADER.oneofs_by_name['optional_image_reference_camera'].fields.append(
   _LIGHTHEADER.fields_by_name['image_reference_camera'])

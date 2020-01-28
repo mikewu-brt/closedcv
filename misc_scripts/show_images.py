@@ -29,6 +29,7 @@ import matplotlib.pyplot as plt
 parser = argparse.ArgumentParser(description="Stereo Calibrate 2")
 parser.add_argument('--image_dir', default='Calibration_Aug23')
 parser.add_argument('--cal_dir', default='Calibration_Aug23')
+parser.add_argument('--start_idx', type=int, default=0)
 
 # Open a figure to avoid cv2.imshow crash
 plt.figure(1)
@@ -51,7 +52,7 @@ if use_lens_shading is True:
     for cam_idx in range(image_helper.num_cam()):
         lens_distortion.append(LensDistortion(cam_idx, None, args.cal_dir))
 
-orientation = 0
+orientation = args.start_idx
 all_files_read = False
 while not all_files_read:
     for cam_idx in range(image_helper.num_cam()):

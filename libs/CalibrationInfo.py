@@ -19,6 +19,7 @@ import camera_id_pb2
 import sensor_type_pb2
 import matrix3x3f_pb2
 import point3f_pb2
+import point2f_pb2
 import hw_info_pb2
 from google.protobuf import json_format
 
@@ -81,12 +82,18 @@ class CalibrationInfo:
         else:
             self.__vig[cam_idx] = vig
 
+    def dist_map(self, cam_idx=None):
+        if cam_idx is None:
+            return self.__dist_map
+        return self.__dist_map[cam_idx]
+
     def write_json(self, filename):
         lightheader = lightheader_pb2.LightHeader()
         if self.__imu_info is not None:
             lightheader.hw_info.CopyFrom(self.__imu_info)
 
         lightheader.hw_info.manufacturer = self.__setup.RigInfo.rig_manufacturer
+        lightheader.hw_info.geometric_calib_version = self.__version
 
         num_cam = self.__K.shape[0]
         for cam_idx in range(num_cam):
@@ -141,6 +148,23 @@ class CalibrationInfo:
             cal_info.geometry.distortion.polynomial.normalization.y = self.__K[cam_idx, 1, 1]
             cal_info.geometry.distortion.polynomial.coeffs[:] = self.__D[cam_idx, 0]
 
+            # add distortion map here if the field is defined in the protobuf and distortion mode is set for stereo_calibrate
+            list_fields = cal_info.geometry.distortion.DESCRIPTOR.fields_by_name.keys()
+
+            if 'dist_map' in list_fields:
+                if self.__dist_map is not None:
+                    map_size = self.__dist_map[cam_idx,:,:].shape
+                    cal_info.geometry.distortion.dist_map.width = map_size[1]
+                    cal_info.geometry.distortion.dist_map.height = map_size[0]
+                    cal_info.geometry.distortion.dist_map.pixel_offset = self.__pixel_offset
+                    cal_info.geometry.distortion.dist_map.decimate = self.__decimate
+                    dist_map_point = point2f_pb2.Point2F()
+                    for i in range(map_size[0]):
+                        for j in range(map_size[1]):
+                            dist_map_point.x = self.__dist_map[cam_idx,i,j,0]
+                            dist_map_point.y = self.__dist_map[cam_idx,i,j,1]
+                            cal_info.geometry.distortion.dist_map.map.extend([dist_map_point])
+
             if self.__vig is not None:
                 # Generate crosstalk (identity matrix)
                 vig_ct = np.empty((self.__vig[cam_idx].shape[1], self.__vig[cam_idx].shape[0], 4, 4))
@@ -172,6 +196,7 @@ class CalibrationInfo:
         self.__vig = None
 
         cam_idx = 0
+        self.__dist_map = []
         for module_cal in lightheader.module_calibration:
             for pfc in module_cal.geometry.per_focus_calibration:
                 self.__K[cam_idx, 0, 0] = pfc.intrinsics.k_mat.x00
@@ -200,6 +225,19 @@ class CalibrationInfo:
 
             self.__D[cam_idx, 0] = np.array(module_cal.geometry.distortion.polynomial.coeffs[:])
 
+            if module_cal.geometry.distortion.HasField("dist_map"):
+                width = module_cal.geometry.distortion.dist_map.width
+                height = module_cal.geometry.distortion.dist_map.height
+                dist_map = np.zeros((height, width,2), np.float32)
+                array_point2f =  module_cal.geometry.distortion.dist_map.map[:]
+                count = 0
+                for i in range(height):
+                    for j in range(width):
+                        dist_map[i,j,0] = array_point2f[count].x
+                        dist_map[i,j,1] = array_point2f[count].y
+                        count = count + 1
+                self.__dist_map.append(dist_map)
+
             if module_cal.HasField("vignetting"):
                 if cam_idx == 0:
                     self.__vig = []
@@ -224,7 +262,8 @@ class CalibrationInfo:
         self.__imu_info = hw_info_pb2.HwInfo()
         json_format.Parse(json_str, self.__imu_info)
 
-    def __init__(self, cal_dir, calibration_json_fname=None, K=None, D=None, R=None, T=None, V=None):
+    def __init__(self, cal_dir, calibration_json_fname=None, K=None, D=None, R=None, T=None,
+                        V=None, MAP=None, VERSION=None, PIXEL_OFFSET=None, DECIMATE=None):
         path_to_image_dir = os.getenv("PATH_TO_IMAGE_DIR")
         if path_to_image_dir is None:
             path_to_image_dir = '.'
@@ -237,6 +276,10 @@ class CalibrationInfo:
             self.__R = R
             self.__T = T
             self.__vig = V
+            self.__dist_map = MAP
+            self.__version = VERSION
+            self.__pixel_offset = PIXEL_OFFSET
+            self.__decimate = DECIMATE
         else:
             print("Reading calibration from {}".format(calibration_json_fname))
             self.read_calibration_json(os.path.join(self.__cal_dir, calibration_json_fname))

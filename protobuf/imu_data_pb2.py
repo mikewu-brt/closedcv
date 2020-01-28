@@ -12,6 +12,7 @@ _sym_db = _symbol_database.Default()
 
 
 import point3f_pb2 as point3f__pb2
+import point4f_pb2 as point4f__pb2
 
 
 DESCRIPTOR = _descriptor.FileDescriptor(
@@ -19,30 +20,79 @@ DESCRIPTOR = _descriptor.FileDescriptor(
   package='ltpb',
   syntax='proto3',
   serialized_options=None,
-  serialized_pb=b'\n\x0eimu_data.proto\x12\x04ltpb\x1a\rpoint3f.proto\"\xac\x01\n\x07IMUData\x12\x13\n\x0b\x66rame_index\x18\x01 \x01(\r\x12+\n\raccelerometer\x18\x02 \x03(\x0b\x32\x14.ltpb.IMUData.Sample\x12\'\n\tgyroscope\x18\x03 \x03(\x0b\x32\x14.ltpb.IMUData.Sample\x1a\x36\n\x06Sample\x12\x0f\n\x07row_idx\x18\x01 \x01(\r\x12\x1b\n\x04\x64\x61ta\x18\x02 \x01(\x0b\x32\r.ltpb.Point3Fb\x06proto3'
+  serialized_pb=b'\n\x0eimu_data.proto\x12\x04ltpb\x1a\rpoint3f.proto\x1a\rpoint4f.proto\"\x8a\x02\n\x07IMUData\x12\x11\n\tdevice_id\x18\x01 \x01(\x04\x12\x13\n\x0blocation_id\x18\x02 \x01(\r\x12\x10\n\x08raw_time\x18\x03 \x01(\x04\x12\x13\n\x0btemperature\x18\x04 \x01(\x02\x12\x1c\n\x05\x65uler\x18\x05 \x01(\x0b\x32\r.ltpb.Point3F\x12#\n\x0c\x61\x63\x63\x65leration\x18\x06 \x01(\x0b\x32\r.ltpb.Point3F\x12(\n\x11\x66ree_acceleration\x18\x07 \x01(\x0b\x32\r.ltpb.Point3F\x12 \n\tgyroscope\x18\x08 \x01(\x0b\x32\r.ltpb.Point3F\x12!\n\nquaternion\x18\t \x01(\x0b\x32\r.ltpb.Point4Fb\x06proto3'
   ,
-  dependencies=[point3f__pb2.DESCRIPTOR,])
+  dependencies=[point3f__pb2.DESCRIPTOR,point4f__pb2.DESCRIPTOR,])
 
 
 
 
-_IMUDATA_SAMPLE = _descriptor.Descriptor(
-  name='Sample',
-  full_name='ltpb.IMUData.Sample',
+_IMUDATA = _descriptor.Descriptor(
+  name='IMUData',
+  full_name='ltpb.IMUData',
   filename=None,
   file=DESCRIPTOR,
   containing_type=None,
   fields=[
     _descriptor.FieldDescriptor(
-      name='row_idx', full_name='ltpb.IMUData.Sample.row_idx', index=0,
-      number=1, type=13, cpp_type=3, label=1,
+      name='device_id', full_name='ltpb.IMUData.device_id', index=0,
+      number=1, type=4, cpp_type=4, label=1,
       has_default_value=False, default_value=0,
       message_type=None, enum_type=None, containing_type=None,
       is_extension=False, extension_scope=None,
       serialized_options=None, file=DESCRIPTOR),
     _descriptor.FieldDescriptor(
-      name='data', full_name='ltpb.IMUData.Sample.data', index=1,
-      number=2, type=11, cpp_type=10, label=1,
+      name='location_id', full_name='ltpb.IMUData.location_id', index=1,
+      number=2, type=13, cpp_type=3, label=1,
+      has_default_value=False, default_value=0,
+      message_type=None, enum_type=None, containing_type=None,
+      is_extension=False, extension_scope=None,
+      serialized_options=None, file=DESCRIPTOR),
+    _descriptor.FieldDescriptor(
+      name='raw_time', full_name='ltpb.IMUData.raw_time', index=2,
+      number=3, type=4, cpp_type=4, label=1,
+      has_default_value=False, default_value=0,
+      message_type=None, enum_type=None, containing_type=None,
+      is_extension=False, extension_scope=None,
+      serialized_options=None, file=DESCRIPTOR),
+    _descriptor.FieldDescriptor(
+      name='temperature', full_name='ltpb.IMUData.temperature', index=3,
+      number=4, type=2, cpp_type=6, label=1,
+      has_default_value=False, default_value=float(0),
+      message_type=None, enum_type=None, containing_type=None,
+      is_extension=False, extension_scope=None,
+      serialized_options=None, file=DESCRIPTOR),
+    _descriptor.FieldDescriptor(
+      name='euler', full_name='ltpb.IMUData.euler', index=4,
+      number=5, type=11, cpp_type=10, label=1,
+      has_default_value=False, default_value=None,
+      message_type=None, enum_type=None, containing_type=None,
+      is_extension=False, extension_scope=None,
+      serialized_options=None, file=DESCRIPTOR),
+    _descriptor.FieldDescriptor(
+      name='acceleration', full_name='ltpb.IMUData.acceleration', index=5,
+      number=6, type=11, cpp_type=10, label=1,
+      has_default_value=False, default_value=None,
+      message_type=None, enum_type=None, containing_type=None,
+      is_extension=False, extension_scope=None,
+      serialized_options=None, file=DESCRIPTOR),
+    _descriptor.FieldDescriptor(
+      name='free_acceleration', full_name='ltpb.IMUData.free_acceleration', index=6,
+      number=7, type=11, cpp_type=10, label=1,
+      has_default_value=False, default_value=None,
+      message_type=None, enum_type=None, containing_type=None,
+      is_extension=False, extension_scope=None,
+      serialized_options=None, file=DESCRIPTOR),
+    _descriptor.FieldDescriptor(
+      name='gyroscope', full_name='ltpb.IMUData.gyroscope', index=7,
+      number=8, type=11, cpp_type=10, label=1,
+      has_default_value=False, default_value=None,
+      message_type=None, enum_type=None, containing_type=None,
+      is_extension=False, extension_scope=None,
+      serialized_options=None, file=DESCRIPTOR),
+    _descriptor.FieldDescriptor(
+      name='quaternion', full_name='ltpb.IMUData.quaternion', index=8,
+      number=9, type=11, cpp_type=10, label=1,
       has_default_value=False, default_value=None,
       message_type=None, enum_type=None, containing_type=None,
       is_extension=False, extension_scope=None,
@@ -59,75 +109,24 @@ _IMUDATA_SAMPLE = _descriptor.Descriptor(
   extension_ranges=[],
   oneofs=[
   ],
-  serialized_start=158,
-  serialized_end=212,
+  serialized_start=55,
+  serialized_end=321,
 )
 
-_IMUDATA = _descriptor.Descriptor(
-  name='IMUData',
-  full_name='ltpb.IMUData',
-  filename=None,
-  file=DESCRIPTOR,
-  containing_type=None,
-  fields=[
-    _descriptor.FieldDescriptor(
-      name='frame_index', full_name='ltpb.IMUData.frame_index', index=0,
-      number=1, type=13, cpp_type=3, label=1,
-      has_default_value=False, default_value=0,
-      message_type=None, enum_type=None, containing_type=None,
-      is_extension=False, extension_scope=None,
-      serialized_options=None, file=DESCRIPTOR),
-    _descriptor.FieldDescriptor(
-      name='accelerometer', full_name='ltpb.IMUData.accelerometer', index=1,
-      number=2, type=11, cpp_type=10, label=3,
-      has_default_value=False, default_value=[],
-      message_type=None, enum_type=None, containing_type=None,
-      is_extension=False, extension_scope=None,
-      serialized_options=None, file=DESCRIPTOR),
-    _descriptor.FieldDescriptor(
-      name='gyroscope', full_name='ltpb.IMUData.gyroscope', index=2,
-      number=3, type=11, cpp_type=10, label=3,
-      has_default_value=False, default_value=[],
-      message_type=None, enum_type=None, containing_type=None,
-      is_extension=False, extension_scope=None,
-      serialized_options=None, file=DESCRIPTOR),
-  ],
-  extensions=[
-  ],
-  nested_types=[_IMUDATA_SAMPLE, ],
-  enum_types=[
-  ],
-  serialized_options=None,
-  is_extendable=False,
-  syntax='proto3',
-  extension_ranges=[],
-  oneofs=[
-  ],
-  serialized_start=40,
-  serialized_end=212,
-)
-
-_IMUDATA_SAMPLE.fields_by_name['data'].message_type = point3f__pb2._POINT3F
-_IMUDATA_SAMPLE.containing_type = _IMUDATA
-_IMUDATA.fields_by_name['accelerometer'].message_type = _IMUDATA_SAMPLE
-_IMUDATA.fields_by_name['gyroscope'].message_type = _IMUDATA_SAMPLE
+_IMUDATA.fields_by_name['euler'].message_type = point3f__pb2._POINT3F
+_IMUDATA.fields_by_name['acceleration'].message_type = point3f__pb2._POINT3F
+_IMUDATA.fields_by_name['free_acceleration'].message_type = point3f__pb2._POINT3F
+_IMUDATA.fields_by_name['gyroscope'].message_type = point3f__pb2._POINT3F
+_IMUDATA.fields_by_name['quaternion'].message_type = point4f__pb2._POINT4F
 DESCRIPTOR.message_types_by_name['IMUData'] = _IMUDATA
 _sym_db.RegisterFileDescriptor(DESCRIPTOR)
 
 IMUData = _reflection.GeneratedProtocolMessageType('IMUData', (_message.Message,), {
-
-  'Sample' : _reflection.GeneratedProtocolMessageType('Sample', (_message.Message,), {
-    'DESCRIPTOR' : _IMUDATA_SAMPLE,
-    '__module__' : 'imu_data_pb2'
-    # @@protoc_insertion_point(class_scope:ltpb.IMUData.Sample)
-    })
-  ,
   'DESCRIPTOR' : _IMUDATA,
   '__module__' : 'imu_data_pb2'
   # @@protoc_insertion_point(class_scope:ltpb.IMUData)
   })
 _sym_db.RegisterMessage(IMUData)
-_sym_db.RegisterMessage(IMUData.Sample)
 
 
 # @@protoc_insertion_point(module_scope)

@@ -86,6 +86,17 @@ print("")
 
 display_size = image_helper.display_size(1024)
 
+###############################################
+# extract the code version (hash number) using git log and mark it with a *, if the checked out code is modified in any ways
+stream = os.popen('git status', 'r', 1)
+output_gitstatus = stream.read()
+stream = os.popen('git log --pretty=format:\'%h\' -n 1', 'r', 1)
+version = stream.read()
+print (version)
+if output_gitstatus.find('modified:') != -1:
+    version = version+'*'
+###############################################
+
 ######################
 
 num_cam = image_helper.num_cam()
@@ -382,7 +393,21 @@ if lens_distortion[0].vignetting() is not None:
     V = np.array(V)
 
 # Save results
-cal_info = CalibrationInfo(args.cal_dir, K=np.array(K), D=np.array(D), R=np.array(R), T=np.array(T), V=V)
+if args.distortion_map:
+    decimate = 16
+    pixel_offset = False
+    MAP = []
+    for cam_idx in range(num_cam):
+        asic_dist_map = lens_distortion[cam_idx].asic_distortion_map(pixel_quad_decimate=decimate, pixel_offset=pixel_offset)
+        lens_distortion[cam_idx].set_asic_distortion_map(asic_dist_map, (asic_dist_map.shape[1], asic_dist_map.shape[0]), pixel_offset=pixel_offset)
+        MAP.append(lens_distortion[cam_idx].distortion_map())
+
+    MAP = np.array(MAP)
+    cal_info = CalibrationInfo(args.cal_dir, K=np.array(K), D=np.array(D), R=np.array(R), T=np.array(T), V=V, MAP=MAP,
+                                VERSION=version, PIXEL_OFFSET=pixel_offset, DECIMATE=decimate)
+else:
+    cal_info = CalibrationInfo(args.cal_dir, K=np.array(K), D=np.array(D), R=np.array(R), T=np.array(T), V=V, VERSION=version)
+
 cal_info.write_json("calibration.json")
 
 for cam_idx in range(num_cam):
