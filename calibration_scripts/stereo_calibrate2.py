@@ -64,7 +64,7 @@ criteria = (cv2.TERM_CRITERIA_EPS + cv2.TERM_CRITERIA_MAX_ITER, 30, 0.001)
 
 # Misc control
 show_images = True
-process_image_files = False
+process_image_files = True
 force_fx_eq_fy = True
 use_2step_findchessboard = False
 
