@@ -1,0 +1,5 @@
+[gerrit]
+host=hq-gerrit01
+port=29418
+project=closedcv
+
