@@ -24,7 +24,6 @@ class Image:
         if path_to_image_dir is None:
             path_to_image_dir = '.'
         self.__directory = os.path.join(path_to_image_dir, directory)
-
         self.__setup = importlib.import_module("{}.setup".format(directory))
 
         if (len(self.__setup.RigInfo.cam_position_m) != len(self.__setup.RigInfo.input_image_filename)) \
@@ -57,6 +56,15 @@ class Image:
         while (self.__setup.SensorInfo.width * scale) > float(max_width):
             scale /= 2.0
         return scale
+
+    def get_image_name(self, camera_idx, capture_idx):
+
+        if self.__setup is None:
+            print("No setup file specified")
+            sys.exit(1)
+        fname = self.__setup.RigInfo.input_image_filename[camera_idx].format(capture_idx)
+
+        return fname
 
     def read_image_file(self, camera_idx, capture_idx, scale_to_8bit=True, raw_output=False, file_name = None ):
         """
@@ -116,6 +124,15 @@ class Image:
                 gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
 
         return img, gray
+
+    def get_cam_name(self, camera_idx):
+
+        if self.__setup is None:
+            print("No setup file specified")
+            sys.exit(1)
+
+        return self.__setup.RigInfo.camera_module_serial_number[camera_idx]
+
 
     def load_np_file(self, filename):
         fname = os.path.join(self.__directory, filename)

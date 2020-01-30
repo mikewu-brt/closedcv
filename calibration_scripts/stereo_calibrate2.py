@@ -19,6 +19,7 @@ import argparse
 from libs.Image import *
 from libs.CalibrationInfo import *
 from libs.LensDistortion import *
+from misc_scripts.coverage_heatmap import create_corner_heatmap
 import matplotlib as matplot
 matplot.use('TkAgg')
 import matplotlib.pyplot as plt
@@ -63,7 +64,22 @@ checker_size_mm = setupInfo.ChartInfo.size_mm
 criteria = (cv2.TERM_CRITERIA_EPS + cv2.TERM_CRITERIA_MAX_ITER, 30, 0.001)
 
 # Misc control
-show_images = True
+show_images = False
+
+# create directories to save debug corner images
+path_to_image_dir = os.getenv("PATH_TO_IMAGE_DIR")
+if path_to_image_dir is None:
+    path_to_image_dir = '.'
+root_dir = os.path.join(path_to_image_dir, args.image_dir)
+
+chessboard_dir = os.path.join(root_dir, 'chessboards')
+fail_dir = os.path.join(root_dir, 'detect_fail')
+
+if not os.path.exists(chessboard_dir):
+    os.mkdir(chessboard_dir)
+if not os.path.exists(fail_dir):
+    os.mkdir(fail_dir)
+
 process_image_files = True
 force_fx_eq_fy = True
 use_2step_findchessboard = False
@@ -131,6 +147,8 @@ if process_image_files:
         # Load images
         for cam_idx in range(num_cam):
             img_tmp, gray_tmp = image_helper.read_image_file(cam_idx, orientation, scale_to_8bit=False)
+            fname = image_helper.get_image_name(cam_idx, orientation)
+
             if img_tmp is None:
                 all_files_read = True
                 break
@@ -156,8 +174,11 @@ if process_image_files:
                 else:
                     corners2[cam_idx, 0, :, :, :] = corners[::-1]
                 intrinsic_pts[cam_idx].append(corners2[cam_idx, 0].copy())
+
+                img2 = cv2.drawChessboardCorners(img, (nx, ny), corners2[cam_idx, 0], True)
+                cv2.imwrite(os.path.join(chessboard_dir, fname.replace('.bin', '_chessboard.png')), img2)
+
                 if show_images:
-                    img2 = cv2.drawChessboardCorners(img, (nx, ny), corners2[cam_idx, 0], True)
                     img2 = cv2.resize(img2, None, fx=display_size, fy=display_size)
                     cv2.imshow("{}".format(setupInfo.RigInfo.module_name[cam_idx]), img2)
                     cv2.waitKey(500)
@@ -165,6 +186,8 @@ if process_image_files:
                 print("Chessboard not found")
                 chessboard_found = False
                 chessboard_detect[cam_idx].append(False)
+                cv2.imwrite(os.path.join(fail_dir, fname.replace('.bin', '_fail.png')), img)
+
                 if show_images:
                     img2 = cv2.resize(img, None, fx=display_size, fy=display_size)
                     cv2.imshow("Bad Image {}".format(setupInfo.RigInfo.module_name[cam_idx]), img2)
@@ -426,3 +449,6 @@ cal_file_helper.save_text_file("D.txt", np.squeeze(D_np))
 cal_file_helper.save_text_file("K.txt", K_np)
 cal_file_helper.save_text_file("R.txt", np.reshape(R_np, [-1, num_cam]))
 cal_file_helper.save_text_file("T.txt", np.squeeze(T_np))
+
+# create debug corner detection heatmaps
+create_corner_heatmap(root_dir)
