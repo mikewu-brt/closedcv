@@ -34,8 +34,12 @@ parser.add_argument('--image_dir', default='Oct2_cal')
 parser.add_argument('--cal_dir', default='Oct2_cal')
 parser.add_argument('--fix_focal_length', action="store_true", default=False, help='use this option if the focal length is to be determined explicitly and then set to that value')
 parser.add_argument('--distortion_map', action="store_true", default=False, help='Use distortion map')
+parser.add_argument('--radial_distortion', action="store_true", default=False, help=' save radial  distortion map in the calibration file and also the coeffs also needs distortion_map option to be present')
+parser.add_argument('--show_images', action="store_true", default=False, help='Show images')
+parser.add_argument('--check_hashcode', action="store_true", default=False, help='compute hash code for the calibration data set and compare with hash code in calibration json file ')
 parser.add_argument('--fix_intrinsics', action="store_true", default=False, help='use this option if intrinsics have been estimated before and need to be used as such ')
-parser.add_argument('--json_filename', default='calibration_fixed.json', help='calibration json file to read intrinsics from')
+parser.add_argument('--json_filename', default='', help='calibration json file to read intrinsics from')
+parser.add_argument('--skip_write_png', action="store_true", default=False, help='skip writing debug png images for detected/undetected chessboards')
 
 args, unknown = parser.parse_known_args()
 if unknown:
@@ -43,7 +47,11 @@ if unknown:
 
 ####################
 
-image_helper = Image(args.image_dir)
+if args.skip_write_png:
+    image_helper = Image(args.image_dir)
+else:
+    image_helper = Image(args.image_dir, create_png_dir=True)
+
 cal_file_helper = Image(args.cal_dir)
 setupInfo = image_helper.setup_info()
 img_size = (setupInfo.SensorInfo.width, setupInfo.SensorInfo.height)
@@ -65,29 +73,20 @@ criteria = (cv2.TERM_CRITERIA_EPS + cv2.TERM_CRITERIA_MAX_ITER, 30, 0.001)
 
 # Misc control
 show_images = False
-
-# create directories to save debug corner images
-path_to_image_dir = os.getenv("PATH_TO_IMAGE_DIR")
-if path_to_image_dir is None:
-    path_to_image_dir = '.'
-root_dir = os.path.join(path_to_image_dir, args.image_dir)
-
-chessboard_dir = os.path.join(root_dir, 'chessboards')
-fail_dir = os.path.join(root_dir, 'detect_fail')
-
-if not os.path.exists(chessboard_dir):
-    os.mkdir(chessboard_dir)
-if not os.path.exists(fail_dir):
-    os.mkdir(fail_dir)
-
 process_image_files = True
 force_fx_eq_fy = True
 use_2step_findchessboard = False
 
 if args.fix_intrinsics:
+    if args.json_filename is '':
+        print("Please provide a calibration json file to read intrinsics from!!")
+        exit(1)
     cal_info_read = CalibrationInfo(args.cal_dir, args.json_filename)
     D_fixed = cal_info_read.D()
     K_fixed = cal_info_read.K()
+
+if args.show_images:
+    show_images = True
     
 print("")
 print("Script Options:")
@@ -120,7 +119,7 @@ num_cam = image_helper.num_cam()
 # instantiate lenDistortion
 lens_distortion = []
 for cam_idx in range(num_cam):
-    lens_distortion.append(LensDistortion(cam_idx, args.cal_dir, args.cal_dir))
+    lens_distortion.append(LensDistortion(cam_idx, args.cal_dir, args.cal_dir, args.distortion_map))
 
 # Open a figure to avoid cv2.imshow crash
 plt.figure(1)
@@ -136,11 +135,37 @@ chessboard_detect = []
 for cam_idx in range(num_cam):
     intrinsic_pts.append([])
     chessboard_detect.append([])
-
 corners2 = np.empty((num_cam, 1, nx*ny, 1, 2), dtype=np.float32)
 all_files_read = False
 orientation = 0
 num_files_missing = 0
+
+if args.check_hashcode:
+    print("args.jsofilename = {}".format(args.json_filename))
+    if args.json_filename is '':
+        print("Please provide a calibration json file to compare with!!")
+        exit(1)
+    image_helper_hash = Image(args.image_dir)
+    while not all_files_read:
+        # Load images
+        for cam_idx in range(num_cam):
+           raw = image_helper_hash.compute_hash_code(cam_idx, orientation, scale_to_8bit=False)
+           if raw is None:
+                all_files_read = True
+                break
+        orientation += 1
+    cal_info_read = CalibrationInfo(args.cal_dir, args.json_filename)
+
+    if image_helper_hash.get_hashcode().hexdigest() == cal_info_read.hash_code():
+        print("Calibration generated using the same database")
+    else:
+        print("Calibration generated using Different database")
+    print(image_helper_hash.get_hashcode().hexdigest())
+    print(cal_info_read.hash_code())
+    exit(0)
+
+orientation = 0
+all_files_read = False
 if process_image_files:
     while not all_files_read:
         chessboard_found = True
@@ -152,11 +177,11 @@ if process_image_files:
             if img_tmp is None:
                 all_files_read = True
                 break
-
             img = lens_distortion[cam_idx].correct_vignetting(img_tmp, None, apply_flag=True, alpha=0.7, scale_to_8bit=True)
             gray = lens_distortion[cam_idx].correct_vignetting(gray_tmp, None, apply_flag=True, alpha=0.7, scale_to_8bit=True)
 
-            if args.distortion_map:
+            # perform distortion correction if distortion_map flag is set and radial_distortion_flag is false
+            if not args.radial_distortion and args.distortion_map:
                 img = lens_distortion[cam_idx].correct_distortion(img)
                 gray = lens_distortion[cam_idx].correct_distortion(gray)
 
@@ -176,7 +201,7 @@ if process_image_files:
                 intrinsic_pts[cam_idx].append(corners2[cam_idx, 0].copy())
 
                 img2 = cv2.drawChessboardCorners(img, (nx, ny), corners2[cam_idx, 0], True)
-                cv2.imwrite(os.path.join(chessboard_dir, fname.replace('.bin', '_chessboard.png')), img2)
+                image_helper.write_chessboard_png( fname, img2 )
 
                 if show_images:
                     img2 = cv2.resize(img2, None, fx=display_size, fy=display_size)
@@ -186,7 +211,7 @@ if process_image_files:
                 print("Chessboard not found")
                 chessboard_found = False
                 chessboard_detect[cam_idx].append(False)
-                cv2.imwrite(os.path.join(fail_dir, fname.replace('.bin', '_fail.png')), img)
+                image_helper.write_failed_png( fname, img )
 
                 if show_images:
                     img2 = cv2.resize(img, None, fx=display_size, fy=display_size)
@@ -244,13 +269,14 @@ i_flags |= cv2.CALIB_FIX_K3
 
 if args.distortion_map:
     i_flags |= cv2.CALIB_ZERO_TANGENT_DIST
-    i_flags |= cv2.CALIB_FIX_K1
-    i_flags |= cv2.CALIB_FIX_K2
     i_flags |= cv2.CALIB_FIX_K3
     i_flags |= cv2.CALIB_FIX_K4
     i_flags |= cv2.CALIB_FIX_K5
     i_flags |= cv2.CALIB_FIX_K6
     i_flags |= cv2.CALIB_FIX_S1_S2_S3_S4
+    if not args.radial_distortion:
+        i_flags |= cv2.CALIB_FIX_K1
+        i_flags |= cv2.CALIB_FIX_K2
 
 if force_fx_eq_fy:
     i_flags |= cv2.CALIB_FIX_ASPECT_RATIO
@@ -421,15 +447,21 @@ if args.distortion_map:
     pixel_offset = False
     MAP = []
     for cam_idx in range(num_cam):
+        # if both distortion_map and radial_distortion flags are set then generate distortion map correcponding to radial distortion and save those to calibration file
+        if args.radial_distortion:
+            lens_distortion[cam_idx].set_radial_distortion_map( K=K[cam_idx], D=D[cam_idx], size=img_size )
+
         asic_dist_map = lens_distortion[cam_idx].asic_distortion_map(pixel_quad_decimate=decimate, pixel_offset=pixel_offset)
-        lens_distortion[cam_idx].set_asic_distortion_map(asic_dist_map, (asic_dist_map.shape[1], asic_dist_map.shape[0]), pixel_offset=pixel_offset)
-        MAP.append(lens_distortion[cam_idx].distortion_map())
+        # avoid the case when both x and y values of dist_map are 0 and hence not written out by proto3 : YH TODO - need to fix this
+        asic_dist_map[np.where(asic_dist_map[:, :, 0] == 0.0)] = .00000000000000001
+        ##asic_dist_map[np.where(asic_dist_map[:, :, 1] == 0.0)] = .00000000001
+        MAP.append(asic_dist_map)
 
     MAP = np.array(MAP)
     cal_info = CalibrationInfo(args.cal_dir, K=np.array(K), D=np.array(D), R=np.array(R), T=np.array(T), V=V, MAP=MAP,
-                                VERSION=version, PIXEL_OFFSET=pixel_offset, DECIMATE=decimate)
+                                VERSION=version, PIXEL_OFFSET=pixel_offset, DECIMATE=decimate, HASH_CODE=image_helper.get_hashcode().hexdigest())
 else:
-    cal_info = CalibrationInfo(args.cal_dir, K=np.array(K), D=np.array(D), R=np.array(R), T=np.array(T), V=V, VERSION=version)
+    cal_info = CalibrationInfo(args.cal_dir, K=np.array(K), D=np.array(D), R=np.array(R), T=np.array(T), V=V, VERSION=version, HASH_CODE=image_helper.get_hashcode().hexdigest() )
 
 cal_info.write_json("calibration.json")
 
@@ -451,4 +483,4 @@ cal_file_helper.save_text_file("R.txt", np.reshape(R_np, [-1, num_cam]))
 cal_file_helper.save_text_file("T.txt", np.squeeze(T_np))
 
 # create debug corner detection heatmaps
-create_corner_heatmap(root_dir)
+create_corner_heatmap(args.cal_dir)

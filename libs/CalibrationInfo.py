@@ -69,6 +69,9 @@ class CalibrationInfo:
         else:
             self.__T[cam_idx] = T
 
+    def hash_code(self):
+        return self.__hash_code
+
     def vignetting(self, cam_idx=None):
         # roi -> (width, height)
         if cam_idx is None:
@@ -93,7 +96,7 @@ class CalibrationInfo:
             lightheader.hw_info.CopyFrom(self.__imu_info)
 
         lightheader.hw_info.manufacturer = self.__setup.RigInfo.rig_manufacturer
-        lightheader.hw_info.geometric_calib_version = self.__version
+        lightheader.hw_info.geometric_calib_version = self.__hash_code + '+' +self.__version
 
         num_cam = self.__K.shape[0]
         for cam_idx in range(num_cam):
@@ -154,8 +157,11 @@ class CalibrationInfo:
             if 'dist_map' in list_fields:
                 if self.__dist_map is not None:
                     map_size = self.__dist_map[cam_idx,:,:].shape
-                    cal_info.geometry.distortion.dist_map.width = map_size[1]
-                    cal_info.geometry.distortion.dist_map.height = map_size[0]
+                    # save the full image size as width and height (distortion map will need to be expanded to this size)
+                    # Actual dist_map size will be determined based on saved array size and then cross-checked against
+                    # length estimated from image size and the decimate value
+                    cal_info.geometry.distortion.dist_map.width =  self.__setup.SensorInfo.width
+                    cal_info.geometry.distortion.dist_map.height = self.__setup.SensorInfo.height
                     cal_info.geometry.distortion.dist_map.pixel_offset = self.__pixel_offset
                     cal_info.geometry.distortion.dist_map.decimate = self.__decimate
                     dist_map_point = point2f_pb2.Point2F()
@@ -194,7 +200,8 @@ class CalibrationInfo:
         self.__T = np.zeros((num_cam, 3, 1), dtype=np.float)
         self.__D = np.zeros((num_cam, 1, 5), dtype=np.float)
         self.__vig = None
-
+        self.__hash_code = lightheader.hw_info.geometric_calib_version[0:64]
+        self.__version  =  lightheader.hw_info.geometric_calib_version[65:]
         cam_idx = 0
         self.__dist_map = []
         for module_cal in lightheader.module_calibration:
@@ -226,8 +233,8 @@ class CalibrationInfo:
             self.__D[cam_idx, 0] = np.array(module_cal.geometry.distortion.polynomial.coeffs[:])
 
             if module_cal.geometry.distortion.HasField("dist_map"):
-                width = module_cal.geometry.distortion.dist_map.width
-                height = module_cal.geometry.distortion.dist_map.height
+                width = 2 +  int((module_cal.geometry.distortion.dist_map.width-1)/(2*module_cal.geometry.distortion.dist_map.decimate))
+                height = 2 +  int((module_cal.geometry.distortion.dist_map.height-1)/(2*module_cal.geometry.distortion.dist_map.decimate))
                 dist_map = np.zeros((height, width,2), np.float32)
                 array_point2f =  module_cal.geometry.distortion.dist_map.map[:]
                 count = 0
@@ -263,7 +270,7 @@ class CalibrationInfo:
         json_format.Parse(json_str, self.__imu_info)
 
     def __init__(self, cal_dir, calibration_json_fname=None, K=None, D=None, R=None, T=None,
-                        V=None, MAP=None, VERSION=None, PIXEL_OFFSET=None, DECIMATE=None):
+                        V=None, MAP=None, VERSION=None, PIXEL_OFFSET=None, DECIMATE=None, HASH_CODE=None):
         path_to_image_dir = os.getenv("PATH_TO_IMAGE_DIR")
         if path_to_image_dir is None:
             path_to_image_dir = '.'
@@ -280,6 +287,7 @@ class CalibrationInfo:
             self.__version = VERSION
             self.__pixel_offset = PIXEL_OFFSET
             self.__decimate = DECIMATE
+            self.__hash_code = HASH_CODE
         else:
             print("Reading calibration from {}".format(calibration_json_fname))
             self.read_calibration_json(os.path.join(self.__cal_dir, calibration_json_fname))

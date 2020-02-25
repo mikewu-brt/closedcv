@@ -29,7 +29,7 @@ def create_corner_heatmap(cal_dir):
             for detected_pt in detected_im:
                 coverage_map[int(detected_pt[0][1]/downsize), int(detected_pt[0][0]/downsize)] += 1
 
-        plt.imsave(os.path.join(cal_dir, f'{image_helper.get_cam_name(cam_idx)}_checkerboard_heatmap.png'),
+        plt.imsave(os.path.join(image_helper.directory(), f'{image_helper.get_cam_name(cam_idx)}_checkerboard_heatmap.png'),
                    coverage_map, cmap='hot')
 
 

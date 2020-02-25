@@ -145,7 +145,7 @@ class LensDistortion:
         self.set_opencv_distortion_map(dist_map)
 
 
-    def asic_distortion_map(self, pixel_quad_decimate=16, pixel_offset=True):
+    def asic_distortion_map(self, pixel_quad_decimate=16, pixel_offset=True ):
         decimate = 2 * pixel_quad_decimate
 
         # Decimate and extrapolate
@@ -168,12 +168,11 @@ class LensDistortion:
         asic_map[:, :, 1] = fy(pts).reshape(dy + 1, dx + 1) / 2.0
         return asic_map
 
-    def set_asic_distortion_map(self, asic_dist_map, img_size, pixel_offset=True):
+    def set_asic_distortion_map(self, asic_dist_map, img_size, pixel_offset=True ):
         nx = img_size[0]
         ny = img_size[1]
         dy, dx, _ = asic_dist_map.shape
         decimate = math.ceil(nx / (dx - 1))
-
         x = np.arange(dx, dtype=np.float64) * decimate
         y = np.arange(dy, dtype=np.float64) * decimate
         if pixel_offset:
@@ -198,7 +197,7 @@ class LensDistortion:
 
         if D is None:
             # Use the distortion map
-            dist_map = self.opencv_distortion_map(distortion_map)
+            dist_map = self.opencv_distortion_map(distortion_map )
         else:
             # Create a distortion map based on K and D
             dist_map, _ = cv2.initUndistortRectifyMap(cameraMatrix=K, distCoeffs=D, R=np.identity(3),
@@ -273,7 +272,7 @@ class LensDistortion:
         self.__lens_shade_filter[:, :, 2] = self.__lens_shade_filter[:, :, 0]
         return
 
-    def correct_distortion_points(self, pts):
+    def correct_distortion_points(self, pts ):
         m, n, _ = self.__dist_map.shape
         x = np.arange(n)
         y = np.arange(m)
@@ -302,11 +301,12 @@ class LensDistortion:
         plt.quiverkey(q, 0.9, 0.9, qscale / 4, "${:0.1f} pixels$".format(qscale / 4), labelpos='E', coordinates='figure')
         plt.draw()
 
-    def __init__(self, lens_idx=0, distortion_dir=None, vignetting_dir=None):
+    def __init__(self, lens_idx=0, distortion_dir=None, vignetting_dir=None, distortion_map=False ):
         if distortion_dir is not None:
-            file_helper = Image(distortion_dir)
-            setupInfo = file_helper.setup_info()
-            self.__dist_map = file_helper.load_np_file("distortion_map_{}.npy".format(setupInfo.RigInfo.module_name[lens_idx]))
+            if distortion_map:
+               file_helper = Image(distortion_dir)
+               setupInfo = file_helper.setup_info()
+               self.__dist_map = file_helper.load_np_file("distortion_map_{}.npy".format(setupInfo.RigInfo.module_name[lens_idx]))
         if vignetting_dir is not None:
             file_helper = Image(vignetting_dir)
             self.__vig_setup = file_helper.setup_info()

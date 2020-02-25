@@ -15,16 +15,30 @@ import os
 import numpy as np
 import cv2
 import importlib
+import hashlib
 
 
 class Image:
 
-    def __init__(self, directory):
+    def __init__(self, directory, create_png_dir=False):
+        self.__hashcode = hashlib.sha256()
         path_to_image_dir = os.getenv("PATH_TO_IMAGE_DIR")
         if path_to_image_dir is None:
             path_to_image_dir = '.'
         self.__directory = os.path.join(path_to_image_dir, directory)
         self.__setup = importlib.import_module("{}.setup".format(directory))
+        self.__chessboard_dir = None
+        self.__fail_dir = None
+
+        if create_png_dir:
+            # create directories to save debug corner images
+            self.__chessboard_dir = os.path.join(self.__directory, 'chessboards')
+            self.__fail_dir = os.path.join(self.__directory, 'detect_fail')
+
+            if not os.path.exists(self.__chessboard_dir):
+                os.mkdir(self.__chessboard_dir)
+            if not os.path.exists(self.__fail_dir):
+                os.mkdir(self.__fail_dir)
 
         if (len(self.__setup.RigInfo.cam_position_m) != len(self.__setup.RigInfo.input_image_filename)) \
                 or (len(self.__setup.RigInfo.cam_position_m) != len(self.__setup.RigInfo.module_name)):
@@ -36,6 +50,18 @@ class Image:
 
     def setup_info(self):
         return self.__setup
+
+    def directory(self):
+        return self.__directory
+
+    def write_failed_png(self, fname, img):
+        if self.__fail_dir is not None:
+            cv2.imwrite(os.path.join(self.__fail_dir, fname.replace('.bin', '_fail.png')), img)
+
+    def write_chessboard_png(self, fname, img ):
+        if self.__chessboard_dir is not None:
+            cv2.imwrite(os.path.join(self.__chessboard_dir, fname.replace('.bin', '_chessboard.png')), img)
+
 
     @staticmethod
     def unpack(raw, num_bits):
@@ -65,6 +91,44 @@ class Image:
         fname = self.__setup.RigInfo.input_image_filename[camera_idx].format(capture_idx)
 
         return fname
+
+    def get_hashcode(self):
+        return self.__hashcode
+
+    def compute_hash_code(self, camera_idx, capture_idx, scale_to_8bit=True, raw_output=False, file_name = None ):
+        """
+        Read raw image files abd compute sha256.
+
+        :param camera_idx: Camera Index
+        :param capture_idx: Capture Index
+        :param store_npy:  Stores processed raw file for future use
+        :return: Processed raw image or None
+        """
+        if self.__setup is None:
+            print("No setup file specified")
+            sys.exit(1)
+        if file_name is None:
+            fname = os.path.join(self.__directory, self.__setup.RigInfo.input_image_filename[camera_idx].format(capture_idx))
+        else:
+            fname = os.path.join(self.__directory, file_name)
+        print("Reading {}".format(fname))
+        try:
+            if os.path.splitext(fname)[1] == ".npy":
+                raw = np.load(fname)
+            elif self.__setup.RigInfo.packed or (self.__setup.SensorInfo.bits_per_pixel <= 8):
+                raw = np.fromfile(fname, np.uint8, -1)
+            else:
+                raw = np.fromfile(fname, np.uint16, -1)
+        except:
+            raw = None
+        if raw is None:
+            print("File does not exist, returning None".format(fname))
+            img = None
+            gray = None
+        else:
+            self.__hashcode.update(raw)
+
+        return raw
 
     def read_image_file(self, camera_idx, capture_idx, scale_to_8bit=True, raw_output=False, file_name = None ):
         """
@@ -98,6 +162,7 @@ class Image:
             img = None
             gray = None
         else:
+            self.__hashcode.update(raw)
             # Convert raw to 16 bit data
             if self.__setup.RigInfo.packed:
                 raw = self.unpack(raw, self.__setup.SensorInfo.bits_per_pixel)
