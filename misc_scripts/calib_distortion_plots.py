@@ -33,6 +33,7 @@ import matplotlib.pyplot as plt
 parser = argparse.ArgumentParser(description="Stereo Calibrate")
 parser.add_argument('--image_dir', default='Oct2_cal')
 parser.add_argument('--cal_dir', default='Oct2_cal')
+parser.add_argument('--json_filename', default='', help='calibration json file to read intrinsics from')
 
 args, unknown = parser.parse_known_args()
 if unknown:
@@ -79,7 +80,7 @@ for cam_idx in range(num_cam):
     view_error.append(image_helper.load_np_file("view_error{}.npy".format(cam_idx)))
 
 imgshape = (setupInfo.SensorInfo.width, setupInfo.SensorInfo.width)
-cal_info = CalibrationInfo(args.cal_dir, json_fname="calibration.json")
+cal_info = CalibrationInfo(args.cal_dir, args.json_filename)
 K = cal_info.K()
 D = cal_info.D()
 
