@@ -16,6 +16,7 @@ import argparse
 import math
 from libs.Image import *
 from libs.LensDistortion import *
+from libs.drawCorners import *
 import matplotlib as matplot
 matplot.use('TkAgg')
 import matplotlib.pyplot as plt
@@ -122,7 +123,7 @@ while not use_saved_results and group < len(setupInfo.ChartInfo.pose_info):
     if ret:
         print("Chessboard found")
         find_corners[group].append(corners)
-        img = cv2.drawChessboardCorners(img.copy(), (nx, ny), corners, True)
+        img = drawCornersSubPix(img.copy(), (nx, ny), corners, True)
     else:
         print("Chessboard not found")
         # Fill with zeros

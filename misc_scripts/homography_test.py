@@ -21,6 +21,7 @@ import numpy as np
 import argparse
 from libs.Image import *
 from libs.LensDistortion import *
+from libs.drawCorners import *
 import matplotlib as matplot
 matplot.use('TkAgg')
 import matplotlib.pyplot as plt
@@ -108,7 +109,7 @@ while not all_files_read:
         dist = []
         if ret:
             #corners = corners[::-1]
-            img = cv2.drawChessboardCorners(img.copy(), (nx, ny), corners.astype(np.float32), True)
+            img = drawCornersSubPix(img.copy(), (nx, ny), corners.astype(np.float32), True)
 
             obj_pts = []
             dist = np.linalg.norm(np.squeeze(corners - center), axis=1)
@@ -254,7 +255,7 @@ if False:
             dist = []
             if ret:
                 #corners = corners[::-1]
-                img = cv2.drawChessboardCorners(img.copy(), (nx, ny), corners.astype(np.float32), True)
+                img = drawCornersSubPix(img.copy(), (nx, ny), corners.astype(np.float32), True)
 
                 obj_pts = []
                 dist = np.linalg.norm(np.squeeze(corners - center), axis=1)

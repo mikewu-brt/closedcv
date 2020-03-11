@@ -18,6 +18,7 @@ import os
 import importlib
 import argparse
 import matplotlib as matplot
+from libs.drawCorners import *
 matplot.use('TkAgg')
 import matplotlib.pyplot as plt
 
@@ -133,7 +134,7 @@ if process_image_files:
                 corners2[cam_idx, 0, :, :, :] = cv2.cornerSubPix(gray, corners, (11, 11), (-1, -1), criteria)
                 intrinsic_pts[cam_idx].append(corners2[cam_idx, 0].copy())
                 if show_images:
-                    img2 = cv2.drawChessboardCorners(img, (nx, ny), corners2[cam_idx, 0].astype(np.float32), True)
+                    img2 = drawCornersSubPix(img, (nx, ny), corners2[cam_idx, 0].astype(np.float32), True)
                     img2 = cv2.resize(img2, None, fx=display_size, fy=display_size)
                     cv2.imshow("Image {}".format(cam_idx), img2)
                     cv2.waitKey(500)

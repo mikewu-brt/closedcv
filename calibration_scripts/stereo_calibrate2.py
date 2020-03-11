@@ -19,6 +19,7 @@ import argparse
 from libs.Image import *
 from libs.CalibrationInfo import *
 from libs.LensDistortion import *
+from libs.drawCorners import *
 from misc_scripts.coverage_heatmap import create_corner_heatmap
 import matplotlib as matplot
 matplot.use('TkAgg')
@@ -201,7 +202,7 @@ if process_image_files:
                     corners2[cam_idx, 0, :, :, :] = corners[::-1]
                 intrinsic_pts[cam_idx].append(corners2[cam_idx, 0].copy())
 
-                img2 = cv2.drawChessboardCorners(img, (nx, ny), corners2[cam_idx, 0], True)
+                img2 = drawCornersSubPix(img, (nx, ny), corners2[cam_idx, 0], True)
                 cal_file_helper.write_chessboard_png( fname, img2 )
 
                 if show_images:

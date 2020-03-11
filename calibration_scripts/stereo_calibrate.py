@@ -17,6 +17,7 @@ import importlib
 import argparse
 from libs.Image import *
 from libs.CalibrationInfo import *
+from libs.drawCorners import *
 import matplotlib as matplot
 matplot.use('TkAgg')
 import matplotlib.pyplot as plt
@@ -104,7 +105,7 @@ if process_image_files:
                 #corners2[cam_idx, 0, :, :, :] = cv2.cornerSubPix(gray, corners, (11, 11), (-1, -1), criteria)
                 corners2[cam_idx, 0, :, :, :] = corners
                 if show_images:
-                    img2 = cv2.drawChessboardCorners(img, (nx, ny), corners2[cam_idx, 0], ret)
+                    img2 = drawCornersSubPix(img, (nx, ny), corners2[cam_idx, 0], ret)
                     img2 = cv2.resize(img2, None, fx=display_size, fy=display_size)
                     cv2.imshow("Image {}".format(cam_idx), img2)
                     cv2.waitKey(500)
