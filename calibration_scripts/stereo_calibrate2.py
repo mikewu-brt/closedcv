@@ -47,12 +47,13 @@ if unknown:
 
 ####################
 
-if args.skip_write_png:
-    image_helper = Image(args.image_dir)
-else:
-    image_helper = Image(args.image_dir, create_png_dir=True)
+image_helper = Image(args.image_dir)
 
-cal_file_helper = Image(args.cal_dir)
+if args.skip_write_png:
+    cal_file_helper = Image(args.cal_dir)
+else:
+    cal_file_helper = Image(args.cal_dir, create_png_dir=True)
+
 setupInfo = image_helper.setup_info()
 img_size = (setupInfo.SensorInfo.width, setupInfo.SensorInfo.height)
 
@@ -201,7 +202,7 @@ if process_image_files:
                 intrinsic_pts[cam_idx].append(corners2[cam_idx, 0].copy())
 
                 img2 = cv2.drawChessboardCorners(img, (nx, ny), corners2[cam_idx, 0], True)
-                image_helper.write_chessboard_png( fname, img2 )
+                cal_file_helper.write_chessboard_png( fname, img2 )
 
                 if show_images:
                     img2 = cv2.resize(img2, None, fx=display_size, fy=display_size)
@@ -211,7 +212,7 @@ if process_image_files:
                 print("Chessboard not found")
                 chessboard_found = False
                 chessboard_detect[cam_idx].append(False)
-                image_helper.write_failed_png( fname, img )
+                cal_file_helper.write_failed_png( fname, img )
 
                 if show_images:
                     img2 = cv2.resize(img, None, fx=display_size, fy=display_size)

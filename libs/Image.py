@@ -16,6 +16,7 @@ import numpy as np
 import cv2
 import importlib
 import hashlib
+import glob
 
 
 class Image:
@@ -37,8 +38,17 @@ class Image:
 
             if not os.path.exists(self.__chessboard_dir):
                 os.mkdir(self.__chessboard_dir)
+            else:
+                files = glob.glob(self.__chessboard_dir + '/*.png')
+                for f in files:
+                    os.remove(f)
+
             if not os.path.exists(self.__fail_dir):
                 os.mkdir(self.__fail_dir)
+            else:
+                files = glob.glob(self.__fail_dir + '/*.png')
+                for f in files:
+                    os.remove(f)
 
         if (len(self.__setup.RigInfo.cam_position_m) != len(self.__setup.RigInfo.input_image_filename)) \
                 or (len(self.__setup.RigInfo.cam_position_m) != len(self.__setup.RigInfo.module_name)):
