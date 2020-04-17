@@ -148,10 +148,10 @@ def drawlines(img1, img2, lines, pts1, pts2, circles=True):
     if np.ndim(img2) < 3:
         img2 = cv2.cvtColor(img2, cv2.COLOR_GRAY2BGR)
     for r, pt1, pt2 in zip(lines, pts1, pts2):
-        color = tuple(np.random.randint(0, 255, 3).tolist())
+        #color = tuple(np.random.randint(0, 255, 3).tolist())
         x0, y0 = map(int, [0, -r[2] / r[1]])
         x1, y1 = map(int, [c, -(r[2] + r[0] * c) / r[1]])
-        img1 = cv2.line(img1, (x0, y0), (x1, y1), color, 1)
+        img1 = cv2.line(img1, (x0, y0), (x1, y1), (0,255,0), 1)
         pt1 = np.int32(pt1)
         pt2 = np.int32(pt2)
         if circles:
@@ -159,6 +159,13 @@ def drawlines(img1, img2, lines, pts1, pts2, circles=True):
             #img2 = cv2.circle(img2, tuple(pt2), 5, color, -1)
             img2 = cv2.circle(img2, (pt2[0,0], pt2[0,1]), 5, color, circle_thickness)
     return img1, img2
+
+def adjust_gamma(image, gamma=1.0):
+   invGamma = 1.0 / gamma
+   table = np.array([
+      ((i / 255.0) ** invGamma) * 255
+      for i in np.arange(0, 256)])
+   return cv2.LUT(image.astype(np.uint8), table.astype(np.uint8))
 
 ####################
 # Input Parameters
@@ -169,7 +176,7 @@ parser = argparse.ArgumentParser(description="Auto Epiviz")
 parser.add_argument('--image_dir', default='2020-04-02_calibration')
 parser.add_argument('--cal_dir', default='4_2_cal_f16/save_rt_cv_init_ref_fppd_04_02/cv_bypassed')
 parser.add_argument('--correspond_dir', default='4_2_cal_f16')
-parser.add_argument('--upsample', type=int, default=1)
+parser.add_argument('--upsample', type=int, default=15)
 parser.add_argument('--patch_size', type=int, default=33)
 parser.add_argument('--point_idx', type=int, default=0)
 parser.add_argument('--frame_num', type=int, default=0)
@@ -199,7 +206,6 @@ img_size = (args.image_height, args.image_width)
 
 
 path_to_image_dir = os.getenv("PATH_TO_IMAGE_DIR")
-#path_to_image_dir = "/Users/yhussain/project/cal_images/"
 
 # read the calibration files
 K = []
@@ -214,8 +220,6 @@ for cam_idx in range(num_cam):
     R.append(R1)
     T.append(T1)
     D.append(D1)
-#    def parse_calib_data_fil(filename, check_dist_norm = False):
-#    return parse_calib_data(json.load( open(filename, 'r')), check_dist_norm)
 
 image_show = False
 #orientation = 30
@@ -358,12 +362,14 @@ for cam_idx in range(1,num_cam):
         line_src = cv2.computeCorrespondEpilines(pts_ref, 1, F).reshape(-1, 3)
         line_ref = cv2.computeCorrespondEpilines(pts_src, 2, F).reshape(-1, 3)
 
+        a1_gamma = np.clip(adjust_gamma(undist_img_stack[0].copy(), 2.2),0,255)
+        src_im_gamma = np.clip(adjust_gamma(undist_img_stack[cam_idx].copy(), 2.2),0,255)
 
-        img_src, img1 = drawlines( undist_img_stack[cam_idx].copy(), undist_img_stack[0].copy(), line_src, pts_src, pts_ref)
+        img_src, img1 = drawlines(src_im_gamma.copy(), a1_gamma.copy(), line_src, pts_src, pts_ref)
         img3 = cv2.resize(img_src, None, fx=1/2, fy=1/2)
         cv2.imshow("{}_full".format(module_name[cam_idx]), img3)
         cv2.waitKey(500)
-        img_src_nocircles, img1_nocircles = drawlines( undist_img_stack[cam_idx].copy(), undist_img_stack[0].copy(), line_src, pts_src, pts_ref, circles=False)
+        img_src_nocircles, img1_nocircles = drawlines(src_im_gamma.copy(), a1_gamma.copy(), line_src, pts_src, pts_ref, circles=False)
 
 
 
@@ -390,21 +396,25 @@ for cam_idx in range(1,num_cam):
         print(patch_point_ref)
         patch_point_ref_zoom = (patch_point_ref[0] * upsample_factor, patch_point_ref[1] * upsample_factor)
         print(patch_point_ref_zoom)
-        color = tuple(np.random.randint(0, 255, 3).tolist())
-        img_roi_ref_zoom = cv2.circle(img_roi_ref_zoom, (np.int32(patch_point_ref_zoom[0]),np.int32(patch_point_ref_zoom[1])), 2*upsample_factor, color, circle_thickness)
+        #color = tuple(np.random.randint(0, 255, 3).tolist())
+        img_roi_ref_zoom = cv2.circle(img_roi_ref_zoom, (np.int32(patch_point_ref_zoom[0]),
+                                                         np.int32(patch_point_ref_zoom[1])), 10, (0,0,255),
+                                     -1)
         #cv2.imshow("A1_{}_nocircles".format(setupInfo.RigInfo.module_name[cam_idx]), img_roi_ref_zoom)
         if cam_idx == 1:
-            image_patches.append(img_roi_ref_zoom)
+            image_patches.append(cv2.cvtColor(img_roi_ref_zoom, cv2.COLOR_BGR2RGB))
 
 
         patch_point_src = (patch_size[0]//2 + corner_point_src[0,0] - x_src, patch_size[1]//2 + corner_point_src[0,1] - y_src)
         print(patch_point_src)
         patch_point_src_zoom = (patch_point_src[0] * upsample_factor, patch_point_src[1] * upsample_factor)
         print(patch_point_src_zoom)
-        color = tuple(np.random.randint(0, 255, 3).tolist())
-        img_roi_src_zoom = cv2.circle(img_roi_src_zoom, (np.int32(patch_point_src_zoom[0]),np.int32(patch_point_src_zoom[1])), 2*upsample_factor, color, circle_thickness)
+        #color = tuple(np.random.randint(0, 255, 3).tolist())
+        img_roi_src_zoom = cv2.circle(img_roi_src_zoom, (np.int32(patch_point_src_zoom[0]),
+                                                         np.int32(patch_point_src_zoom[1])), 10, (0,0,255),
+                                      -1)
         cv2.imshow("{}_nocircles".format(module_name[cam_idx]), img_roi_src_zoom)
-        image_patches.append(img_roi_src_zoom)
+        image_patches.append(cv2.cvtColor(img_roi_src_zoom, cv2.COLOR_BGR2RGB))
 
 
 fig, axes = plt.subplots(2, 2)
@@ -413,10 +423,11 @@ plot_camera(axes[0, 1], "A2", image_patches[1])
 plot_camera(axes[1, 0], "A3", image_patches[2])
 plot_camera(axes[1, 1], "A4", image_patches[3])
 plt.suptitle("Correspondences for point ({:.2f}, {:.2f}) in reference".format(undist_points_stack[0][point_index, 0, 0], undist_points_stack[0][point_index, 0, 1]))
-#img_shape = image_patches[0].shape
-#imstack = np.concatenate((image_patches[0].reshape(-1), image_patches[1].reshape(-1), image_patches[2].reshape(-1), image_patches[3].reshape(-1)))
-#imstack_v = imstack.reshape(-1,img_shape[1],3)
-#cv2.imshow('imstack_v', imstack_v)
+filename = path_to_image_dir + "/" + args.image_dir + "/{}_img_{}_roi_zoom.png".format(
+    args.cal_dir,args.correspond_dir.split('/')[-1].replace('.npy',''))
+
+print(filename)
+plt.savefig(filename)
 
 
 ####################
