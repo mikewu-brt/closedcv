@@ -21,13 +21,19 @@ import glob
 
 class Image:
 
-    def __init__(self, directory, create_png_dir=False):
+    def __init__(self, directory, create_png_dir=False, rig_setup_file=None):
         self.__hashcode = hashlib.sha256()
         path_to_image_dir = os.getenv("PATH_TO_IMAGE_DIR")
         if path_to_image_dir is None:
             path_to_image_dir = '.'
         self.__directory = os.path.join(path_to_image_dir, directory)
-        self.__setup = importlib.import_module("{}.setup".format(directory))
+        if rig_setup_file is None:
+            self.__setup = importlib.import_module("{}.setup".format(directory))
+        else:
+            assert os.path.exists(rig_setup_file), "Specified rig setup file does not exist"
+            rig_setup_dir = os.path.dirname(os.path.abspath(rig_setup_file))
+            sys.path.append(os.path.dirname(rig_setup_dir))
+            self.__setup = importlib.import_module("{}.setup".format(os.path.basename(rig_setup_dir)))
         self.__chessboard_dir = None
         self.__fail_dir = None
 
