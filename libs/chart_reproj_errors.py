@@ -57,27 +57,30 @@ def get_valid_points(reproj_errors):
         valid.append(np.delete(rcam, invalid, axis=0))
     return valid
 
-def plot_abs_error(reproj_errors, chart_shape=(44,19)):
+def plot_reprojection_errors(folder, prefix, chart_shape=(44,19)):
+    reproj_errors = collect_reprojection_errors(folder, prefix)
     valid = get_valid_points(reproj_errors)
     cam_index = 0
-    plt.figure()
+    fig1, together = plt.subplots()
+    fig2, axes = plt.subplots(2, 4, figsize=(24, 8))
     for cam_errors in valid:
         nerrors = np.average(np.linalg.norm(cam_errors, axis=2), axis=0)
         index = np.argmax(nerrors)
         corner = np.unravel_index(index, chart_shape)
         max_error = nerrors[index]
-        plt.figure(1)
-        plt.plot(nerrors)
+        together.plot(nerrors)
         x = np.arange(0, chart_shape[1], 1)
         y = np.arange(0, chart_shape[0], 1)
         xx, yy = np.meshgrid(x, y)
-        fig, ax = plt.subplots()
-        scatter = ax.scatter(xx, yy, s=nerrors*100)
-        ax.set_title("Average absolute reprojection errors for camera {}\nMax Error {:.2f} at {}".format(cam_index, max_error, corner))
+        scatter = axes[0, cam_index].scatter(xx, yy, s=nerrors*100)
+        axes[0, cam_index].set_title("Average absolute reprojection errors for camera {}\nMax Error {:.2f} at {}".format(cam_index, max_error, corner))
         yerrors = np.average(cam_errors[:, :, 0], axis=0)
         xerrors = np.average(cam_errors[:, :, 1], axis=0)
-        plt.figure()
-        Q = plt.quiver(xx, yy, xerrors, yerrors)
-        plt.quiverkey(Q, 0.9, 0.9, max_error, np.format_float_scientific(max_error, precision=2), labelpos='N', coordinates='figure')
-        plt.title("Average reprojection errors for camera {}".format(cam_index))
+        Q = axes[1, cam_index].quiver(xx, yy, xerrors, yerrors)
+        axes[1, cam_index].quiverkey(Q, -0.1, -0.1, max_error, np.format_float_scientific(max_error, precision=2), labelpos='N', coordinates='axes')
+        axes[1, cam_index].set_title("Average for camera {}, chart error: {:.2E}, {:.2E}".format(cam_index, np.average(xerrors), np.average(yerrors)))
         cam_index += 1
+    fig1.suptitle(folder)
+    fig2.suptitle(folder)
+    fig1.savefig(folder + "/linear_plot.png")
+    fig2.savefig(folder + "/scatter_quiver.png")
