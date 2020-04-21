@@ -1,6 +1,7 @@
 import argparse
 import json
 import lightheader_pb2
+from libs.parse_calib_data import *
 
 from google.protobuf import json_format
 
@@ -52,17 +53,6 @@ def update(lightheader, calibdata, cam_idx):
 
     return lightheader
 
-
-def write_lightheader(lightheader, filename):
-    json_str = json_format.MessageToJson(lightheader, preserving_proto_field_name=True, sort_keys=True)
-    open(filename, 'w').write(json_str)
-
-
-def read_lightheader(filename):
-    json_str = open(filename, 'r').read()
-    lightheader = lightheader_pb2.LightHeader()
-    json_format.Parse(json_str, lightheader)
-    return lightheader
 
 parser = argparse.ArgumentParser(description="Convert calib data json output to LightHeader json consumable by LRI creator")
 parser.add_argument('--cal_dir', default='/Users/amaharshi/results/26_3_cal/exr_files/cv_init_ref_fppd_3_26')

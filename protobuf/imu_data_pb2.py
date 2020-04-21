@@ -20,7 +20,7 @@ DESCRIPTOR = _descriptor.FileDescriptor(
   package='ltpb',
   syntax='proto3',
   serialized_options=None,
-  serialized_pb=b'\n\x0eimu_data.proto\x12\x04ltpb\x1a\rpoint3f.proto\x1a\rpoint4f.proto\"\x8a\x02\n\x07IMUData\x12\x11\n\tdevice_id\x18\x01 \x01(\x04\x12\x13\n\x0blocation_id\x18\x02 \x01(\r\x12\x10\n\x08raw_time\x18\x03 \x01(\x04\x12\x13\n\x0btemperature\x18\x04 \x01(\x02\x12\x1c\n\x05\x65uler\x18\x05 \x01(\x0b\x32\r.ltpb.Point3F\x12#\n\x0c\x61\x63\x63\x65leration\x18\x06 \x01(\x0b\x32\r.ltpb.Point3F\x12(\n\x11\x66ree_acceleration\x18\x07 \x01(\x0b\x32\r.ltpb.Point3F\x12 \n\tgyroscope\x18\x08 \x01(\x0b\x32\r.ltpb.Point3F\x12!\n\nquaternion\x18\t \x01(\x0b\x32\r.ltpb.Point4Fb\x06proto3'
+  serialized_pb=b'\n\x0eimu_data.proto\x12\x04ltpb\x1a\rpoint3f.proto\x1a\rpoint4f.proto\"\xb7\x02\n\x07IMUData\x12\x11\n\tdevice_id\x18\x01 \x01(\x04\x12\x13\n\x0blocation_id\x18\x02 \x01(\r\x12\x10\n\x08raw_time\x18\x03 \x01(\x04\x12\x13\n\x0btemperature\x18\x04 \x01(\x02\x12\x1c\n\x05\x65uler\x18\x05 \x01(\x0b\x32\r.ltpb.Point3F\x12#\n\x0c\x61\x63\x63\x65leration\x18\x06 \x01(\x0b\x32\r.ltpb.Point3F\x12(\n\x11\x66ree_acceleration\x18\x07 \x01(\x0b\x32\r.ltpb.Point3F\x12 \n\tgyroscope\x18\x08 \x01(\x0b\x32\r.ltpb.Point3F\x12!\n\nquaternion\x18\t \x01(\x0b\x32\r.ltpb.Point4F\x12\x13\n\x0bsample_time\x18\n \x01(\x04\x12\x16\n\x0esample_counter\x18\x0b \x01(\rb\x06proto3'
   ,
   dependencies=[point3f__pb2.DESCRIPTOR,point4f__pb2.DESCRIPTOR,])
 
@@ -97,6 +97,20 @@ _IMUDATA = _descriptor.Descriptor(
       message_type=None, enum_type=None, containing_type=None,
       is_extension=False, extension_scope=None,
       serialized_options=None, file=DESCRIPTOR),
+    _descriptor.FieldDescriptor(
+      name='sample_time', full_name='ltpb.IMUData.sample_time', index=9,
+      number=10, type=4, cpp_type=4, label=1,
+      has_default_value=False, default_value=0,
+      message_type=None, enum_type=None, containing_type=None,
+      is_extension=False, extension_scope=None,
+      serialized_options=None, file=DESCRIPTOR),
+    _descriptor.FieldDescriptor(
+      name='sample_counter', full_name='ltpb.IMUData.sample_counter', index=10,
+      number=11, type=13, cpp_type=3, label=1,
+      has_default_value=False, default_value=0,
+      message_type=None, enum_type=None, containing_type=None,
+      is_extension=False, extension_scope=None,
+      serialized_options=None, file=DESCRIPTOR),
   ],
   extensions=[
   ],
@@ -110,7 +124,7 @@ _IMUDATA = _descriptor.Descriptor(
   oneofs=[
   ],
   serialized_start=55,
-  serialized_end=321,
+  serialized_end=366,
 )
 
 _IMUDATA.fields_by_name['euler'].message_type = point3f__pb2._POINT3F

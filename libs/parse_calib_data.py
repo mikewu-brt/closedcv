@@ -1,5 +1,19 @@
 import json
+import lightheader_pb2
 import numpy as np
+
+from google.protobuf import json_format
+
+def write_lightheader(lightheader, filename):
+    json_str = json_format.MessageToJson(lightheader, preserving_proto_field_name=True, sort_keys=True)
+    open(filename, 'w').write(json_str)
+
+
+def read_lightheader(filename):
+    json_str = open(filename, 'r').read()
+    lightheader = lightheader_pb2.LightHeader()
+    json_format.Parse(json_str, lightheader)
+    return lightheader
 
 def parse_light_header(lightheader, cam_idx):
     K = np.zeros((3, 3))

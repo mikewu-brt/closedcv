@@ -33,6 +33,22 @@ def pproj(dirname, file_prefix, outdir_prefix, num_cams=4):
     for cam in range(num_cams):
         plotreproj(dirname + "/" + file_prefix + str(cam) + ".fst", dirname + "/" + outdir_prefix + str(cam))
 
+def collect_translations(dirname, file_prefix):
+    cam_translation = load_fst(os.path.join(dirname, file_prefix  + ".fst"))
+    print(cam_translation)
+    rshape = cam_translation.shape
+    print(rshape)
+    translation = np.zeros((rshape[0], rshape[1]))
+    translation[ :, :] = cam_translation[:, :]
+    return translation
+
+def collect_rotations(dirname, file_prefix):
+    cam_rotations = load_fst(os.path.join(dirname, file_prefix  + ".fst"))
+    rshape = cam_rotations.shape
+    print(rshape)
+    rotations = np.zeros((rshape[0], rshape[1]))
+    rotations[ :, :] = cam_rotations[:, :]
+    return rotations
 
 def collect_reprojection_errors(dirname, file_prefix, num_cams=4):
     cam_reproj = load_fst(os.path.join(dirname, file_prefix + str(0) + ".fst"))

@@ -19,7 +19,7 @@ DESCRIPTOR = _descriptor.FileDescriptor(
   package='ltpb',
   syntax='proto3',
   serialized_options=None,
-  serialized_pb=b'\n!vignetting_characterization.proto\x12\x04ltpb\x1a\x10matrix4x4f.proto\"\x81\x04\n\x1aVignettingCharacterization\x12\x42\n\tcrosstalk\x18\x01 \x01(\x0b\x32/.ltpb.VignettingCharacterization.CrosstalkModel\x12J\n\nvignetting\x18\x02 \x03(\x0b\x32\x36.ltpb.VignettingCharacterization.MirrorVignettingModel\x12\x1b\n\x13relative_brightness\x18\x03 \x01(\x02\x12\x16\n\x0elens_hall_code\x18\x04 \x01(\x05\x1ah\n\x0e\x43rosstalkModel\x12\r\n\x05width\x18\x01 \x01(\r\x12\x0e\n\x06height\x18\x02 \x01(\r\x12\x1e\n\x04\x64\x61ta\x18\x03 \x03(\x0b\x32\x10.ltpb.Matrix4x4F\x12\x17\n\x0b\x64\x61ta_packed\x18\x04 \x03(\x02\x42\x02\x10\x01\x1a\x42\n\x0fVignettingModel\x12\r\n\x05width\x18\x01 \x01(\r\x12\x0e\n\x06height\x18\x02 \x01(\r\x12\x10\n\x04\x64\x61ta\x18\x03 \x03(\x02\x42\x02\x10\x01\x1ap\n\x15MirrorVignettingModel\x12\x11\n\thall_code\x18\x01 \x01(\x05\x12\x44\n\nvignetting\x18\x02 \x01(\x0b\x32\x30.ltpb.VignettingCharacterization.VignettingModelb\x06proto3'
+  serialized_pb=b'\n!vignetting_characterization.proto\x12\x04ltpb\x1a\x10matrix4x4f.proto\"\xc6\x04\n\x1aVignettingCharacterization\x12\x42\n\tcrosstalk\x18\x01 \x01(\x0b\x32/.ltpb.VignettingCharacterization.CrosstalkModel\x12J\n\nvignetting\x18\x02 \x03(\x0b\x32\x36.ltpb.VignettingCharacterization.MirrorVignettingModel\x12\x1b\n\x13relative_brightness\x18\x03 \x01(\x02\x12\x16\n\x0elens_hall_code\x18\x04 \x01(\x05\x1ah\n\x0e\x43rosstalkModel\x12\r\n\x05width\x18\x01 \x01(\r\x12\x0e\n\x06height\x18\x02 \x01(\r\x12\x1e\n\x04\x64\x61ta\x18\x03 \x03(\x0b\x32\x10.ltpb.Matrix4x4F\x12\x17\n\x0b\x64\x61ta_packed\x18\x04 \x03(\x02\x42\x02\x10\x01\x1a\x86\x01\n\x0fVignettingModel\x12\r\n\x05width\x18\x01 \x01(\r\x12\x0e\n\x06height\x18\x02 \x01(\r\x12\x10\n\x04\x64\x61ta\x18\x03 \x03(\x02\x42\x02\x10\x01\x12\x13\n\x0bstep_size_x\x18\x04 \x01(\x02\x12\x13\n\x0bstep_size_y\x18\x05 \x01(\x02\x12\x18\n\x10upsample_disable\x18\x06 \x01(\x08\x1ap\n\x15MirrorVignettingModel\x12\x11\n\thall_code\x18\x01 \x01(\x05\x12\x44\n\nvignetting\x18\x02 \x01(\x0b\x32\x30.ltpb.VignettingCharacterization.VignettingModelb\x06proto3'
   ,
   dependencies=[matrix4x4f__pb2.DESCRIPTOR,])
 
@@ -105,6 +105,27 @@ _VIGNETTINGCHARACTERIZATION_VIGNETTINGMODEL = _descriptor.Descriptor(
       message_type=None, enum_type=None, containing_type=None,
       is_extension=False, extension_scope=None,
       serialized_options=b'\020\001', file=DESCRIPTOR),
+    _descriptor.FieldDescriptor(
+      name='step_size_x', full_name='ltpb.VignettingCharacterization.VignettingModel.step_size_x', index=3,
+      number=4, type=2, cpp_type=6, label=1,
+      has_default_value=False, default_value=float(0),
+      message_type=None, enum_type=None, containing_type=None,
+      is_extension=False, extension_scope=None,
+      serialized_options=None, file=DESCRIPTOR),
+    _descriptor.FieldDescriptor(
+      name='step_size_y', full_name='ltpb.VignettingCharacterization.VignettingModel.step_size_y', index=4,
+      number=5, type=2, cpp_type=6, label=1,
+      has_default_value=False, default_value=float(0),
+      message_type=None, enum_type=None, containing_type=None,
+      is_extension=False, extension_scope=None,
+      serialized_options=None, file=DESCRIPTOR),
+    _descriptor.FieldDescriptor(
+      name='upsample_disable', full_name='ltpb.VignettingCharacterization.VignettingModel.upsample_disable', index=5,
+      number=6, type=8, cpp_type=7, label=1,
+      has_default_value=False, default_value=False,
+      message_type=None, enum_type=None, containing_type=None,
+      is_extension=False, extension_scope=None,
+      serialized_options=None, file=DESCRIPTOR),
   ],
   extensions=[
   ],
@@ -117,8 +138,8 @@ _VIGNETTINGCHARACTERIZATION_VIGNETTINGMODEL = _descriptor.Descriptor(
   extension_ranges=[],
   oneofs=[
   ],
-  serialized_start=395,
-  serialized_end=461,
+  serialized_start=396,
+  serialized_end=530,
 )
 
 _VIGNETTINGCHARACTERIZATION_MIRRORVIGNETTINGMODEL = _descriptor.Descriptor(
@@ -154,8 +175,8 @@ _VIGNETTINGCHARACTERIZATION_MIRRORVIGNETTINGMODEL = _descriptor.Descriptor(
   extension_ranges=[],
   oneofs=[
   ],
-  serialized_start=463,
-  serialized_end=575,
+  serialized_start=532,
+  serialized_end=644,
 )
 
 _VIGNETTINGCHARACTERIZATION = _descriptor.Descriptor(
@@ -206,7 +227,7 @@ _VIGNETTINGCHARACTERIZATION = _descriptor.Descriptor(
   oneofs=[
   ],
   serialized_start=62,
-  serialized_end=575,
+  serialized_end=644,
 )
 
 _VIGNETTINGCHARACTERIZATION_CROSSTALKMODEL.fields_by_name['data'].message_type = matrix4x4f__pb2._MATRIX4X4F

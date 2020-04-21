@@ -265,6 +265,28 @@ class Stereo:
         return ref_img, src_img, P1, P2, R1, R2
 
     @staticmethod
+    def drawlinesnew(img1, img2, lines, pts1, pts2, circle_thickness, circles=True):
+        ''' img1 - image on which we draw the epilines for the points in img2
+            lines - corresponding epilines '''
+        r = img1.shape[0]
+        c = img1.shape[1]
+        if np.ndim(img1) < 3:
+            img1 = cv2.cvtColor(img1, cv2.COLOR_GRAY2BGR)
+        if np.ndim(img2) < 3:
+            img2 = cv2.cvtColor(img2, cv2.COLOR_GRAY2BGR)
+        for r, pt1, pt2 in zip(lines, pts1, pts2):
+            color =  (0,255,0)
+            x0, y0 = map(int, [0, -r[2] / r[1]])
+            x1, y1 = map(int, [c, -(r[2] + r[0] * c) / r[1]])
+            img1 = cv2.line(img1, (x0, y0), (x1, y1), color, 1)
+            pt1 = np.int32(pt1)
+            pt2 = np.int32(pt2)
+            if circles:
+                img1 = cv2.circle(img1, (pt1[0,0],pt1[0,1]), 5, color, circle_thickness)
+                img2 = cv2.circle(img2, (pt2[0,0], pt2[0,1]), 5, color, circle_thickness)
+        return img1, img2
+
+    @staticmethod
     def drawlines(img1, img2, lines, pts1, pts2):
         ''' img1 - image on which we draw the epilines for the points in img2
             lines - corresponding epilines '''
