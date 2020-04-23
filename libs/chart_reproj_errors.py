@@ -30,7 +30,7 @@ def plotreproj(filename, outdir):
 
 
 def pproj(dirname, file_prefix, outdir_prefix, num_cams=4):
-    for cam in num_cams:
+    for cam in range(num_cams):
         plotreproj(dirname + "/" + file_prefix + str(cam) + ".fst", dirname + "/" + outdir_prefix + str(cam))
 
 
@@ -74,13 +74,25 @@ def plot_reprojection_errors(folder, prefix, chart_shape=(44,19)):
         xx, yy = np.meshgrid(x, y)
         scatter = axes[0, cam_index].scatter(xx, yy, s=nerrors*100)
         axes[0, cam_index].set_title("Average absolute reprojection errors for camera {}\nMax Error {:.2f} at {}".format(cam_index, max_error, corner))
-        yerrors = np.average(cam_errors[:, :, 0], axis=0)
-        xerrors = np.average(cam_errors[:, :, 1], axis=0)
-        Q = axes[1, cam_index].quiver(xx, yy, xerrors, yerrors)
-        axes[1, cam_index].quiverkey(Q, -0.1, -0.1, max_error, np.format_float_scientific(max_error, precision=2), labelpos='N', coordinates='axes')
+        xerrors = np.average(cam_errors[:, :, 0], axis=0)
+        yerrors = np.average(cam_errors[:, :, 1], axis=0)
+        Q = axes[1, cam_index].quiver(xx, yy, xerrors, yerrors, scale=7.5)
+        axes[1, cam_index].quiverkey(Q, -0.1, -0.1, 0.75, np.format_float_scientific(0.75, precision=2), labelpos='N', coordinates='axes')
         axes[1, cam_index].set_title("Average for camera {}, chart error: {:.2E}, {:.2E}".format(cam_index, np.average(xerrors), np.average(yerrors)))
         cam_index += 1
     fig1.suptitle(folder)
     fig2.suptitle(folder)
     fig1.savefig(folder + "/linear_plot.png")
-    fig2.savefig(folder + "/scatter_quiver.png")
+    fig2.savefig(folder + "/quiver_scatter.png")
+
+
+def plot_chart_deviations(folder, short_title, filename="chart.fst"):
+    chart = load_fst(os.path.join(folder, filename))
+    orig = chart[:, :2]
+    error = chart[:, 2:]
+    plt.figure()
+    Q = plt.quiver(orig[:, 0], orig[:, 1], -error[:, 0], -error[:, 1], scale=50)
+    plt.quiverkey(Q, -0.1, -0.1, 2, "2mm", labelpos='N', coordinates='axes')
+    plt.title(short_title)
+    plt.savefig(os.path.join(folder, short_title + "_chart.png"))
+    plt.close()
