@@ -14,13 +14,13 @@ import numpy as np
 import importlib
 import os
 from libs.Image import *
-import lightheader_pb2
-import camera_id_pb2
-import sensor_type_pb2
-import matrix3x3f_pb2
-import point3f_pb2
-import point2f_pb2
-import hw_info_pb2
+import lt_protobuf.light_header.lightheader_pb2 as lightheader_pb2
+import lt_protobuf.light_header.camera_id_pb2 as camera_id_pb2
+import lt_protobuf.light_header.sensor_type_pb2 as sensor_type_pb2
+import lt_protobuf.light_header.matrix3x3f_pb2 as matrix3x3f_pb2
+import lt_protobuf.light_header.point3f_pb2 as point3f_pb2
+import lt_protobuf.light_header.point2f_pb2 as point2f_pb2
+import lt_protobuf.light_header.hw_info_pb2 as hw_info_pb2
 from google.protobuf import json_format
 
 class CalibrationInfo:

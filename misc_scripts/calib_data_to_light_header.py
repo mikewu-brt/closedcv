@@ -1,6 +1,6 @@
 import argparse
 import json
-import lightheader_pb2
+import lt_protobuf.light_header.lightheader_pb2 as lightheader_pb2
 from libs.parse_calib_data import *
 
 from google.protobuf import json_format

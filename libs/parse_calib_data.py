@@ -1,5 +1,5 @@
 import json
-import lightheader_pb2
+import lt_protobuf.light_header.lightheader_pb2 as lightheader_pb2
 import numpy as np
 
 from google.protobuf import json_format

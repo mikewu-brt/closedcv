@@ -276,9 +276,13 @@ class Stereo:
             img2 = cv2.cvtColor(img2, cv2.COLOR_GRAY2BGR)
         for r, pt1, pt2 in zip(lines, pts1, pts2):
             color =  (0,255,0)
-            x0, y0 = map(int, [0, -r[2] / r[1]])
-            x1, y1 = map(int, [c, -(r[2] + r[0] * c) / r[1]])
-            img1 = cv2.line(img1, (x0, y0), (x1, y1), color, 1)
+            if abs(r[1]) > abs(r[0]):
+                x0, y0 = map(int, [0, -r[2] / r[1]])
+                x1, y1 = map(int, [c, -(r[2] + r[0] * c) / r[1]])
+            else:
+                x0, y0 = map(int, [-r[2] / r[0], 0])
+                x1, y1 = map(int, [-(r[2] + r[1] * c) / r[0], c])
+            img1 = cv2.line(img1, (x0*16, y0*16), (x1*16, y1*16), color, 2, shift=4)
             pt1 = np.int32(pt1)
             pt2 = np.int32(pt2)
             if circles:

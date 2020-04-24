@@ -184,6 +184,7 @@ def ReadImageAllCams( image_dir, setup_file, read_image_bin, frame_index, num_ca
             img_stack.append(img)
     return img_stack
 
+
 # get new optimal camera matrix for each of the cameras and undistort image and the correspondence sets
 def GetOptimalNewCamMatricUndistort( img_stack, exr_np, img_size, read_correspondence_type, num_cam=4):
     K_new = []
@@ -215,10 +216,28 @@ def GetOptimalNewCamMatricUndistort( img_stack, exr_np, img_size, read_correspon
 
     return K_new, corner_detected, undist_img_stack, undist_points_stack, roi
 
+
+def GetUpsampledPoint(point, factor, size, shift):
+    upsampled = [size[0] // 2 + point[0] - shift[0], size[1] // 2 + point[1] - shift[1]]
+    return [upsampled[0] * factor, upsampled[1] * factor]
+
+
+def GetUpsampledLine(line, factor, size, shift):
+    if abs(line[1]) > abs(line[2]):
+        p0 = [0, -line[2] / line[1]]
+        p1 = [size[1], -(line[2] + line[0] * size[1]) / line[1]]
+    else:
+        p0 = [-line[2] / line[0], 0]
+        p1 = [-(line[2] + line[1] * size[0]) / line[0], size[0]]
+    up0 = GetUpsampledPoint(p0, factor, size, shift)
+    up1 = GetUpsampledPoint(p1, factor, size, shift)
+    return [np.cross([up0[0], up0[1], 1], [up1[0], up1[1], 1])]
+
+
 # Select the patches around the correspondence points, zoom into it based on upsample factor, mark the point with\
 # circle and compute and draw epilines.
 def SelPatchZoomMarkPointDrawEpilines(undist_img_stack, undist_points_stack, point_index, K_new, T, corner_detected,\
-                                      patch_size, upsample_factor, module_name, num_cam=4, show_image=True):
+                                      patch_size, upsample_factor, module_name, num_cam=4, show_image=False):
 
     F_stack = []
     image_patches = []
@@ -260,35 +279,29 @@ def SelPatchZoomMarkPointDrawEpilines(undist_img_stack, undist_points_stack, poi
             a1_gamma = np.clip(adjust_gamma(undist_img_stack[0].copy(), 2.2),0,255)
             src_im_gamma = np.clip(adjust_gamma(undist_img_stack[cam_idx].copy(), 2.2),0,255)
 
-            img_src, img1 = Stereo.drawlinesnew(src_im_gamma.copy(), a1_gamma.copy(), line_src, pts_src, pts_ref, circle_thickness)
-            img3 = cv2.resize(img_src, None, fx=1/2, fy=1/2)
             if show_image:
+                img_src, img1 = Stereo.drawlinesnew(src_im_gamma.copy(), a1_gamma.copy(), line_src, pts_src, pts_ref, circle_thickness)
+                img3 = cv2.resize(img_src, None, fx=1 / 2, fy=1 / 2)
                 cv2.imshow("{}_full".format(module_name[cam_idx]), img3)
                 cv2.waitKey(500)
-            img_src_nocircles, img1_nocircles = Stereo.drawlinesnew(src_im_gamma.copy(), a1_gamma.copy(),\
-                                                line_src, pts_src, pts_ref, circle_thickness, circles=False)
-
-            # select roi
-            img_roi_src = img_src[roi_patch_src[1]:roi_patch_src[3], roi_patch_src[0]:roi_patch_src[2]]
-            img_roi_src_nocircles = img_src_nocircles[roi_patch_src[1]:roi_patch_src[3], roi_patch_src[0]:roi_patch_src[2]]
-            img_roi_ref_nocircles = img1_nocircles[roi_patch_ref[1]:roi_patch_ref[3], roi_patch_ref[0]:roi_patch_ref[2]]
-
-            if show_image:
+                img_roi_src = img_src[roi_patch_src[1]:roi_patch_src[3], roi_patch_src[0]:roi_patch_src[2]]
                 img3 = cv2.resize(img_roi_src, None, fx=upsample_factor, fy=upsample_factor, interpolation=cv2.INTER_NEAREST)
                 cv2.imshow("{}".format(module_name[cam_idx]), img3)
 
-            # take the ref and source patches, adjust the corner point locations on the patches, upsample the patches\
-            # and then draw circle and epilines img_src has the epiline and is the ref image ( may need to remove\
-            # circle and add again at a better location0 img_roi_src is the patch that needs to be resized
-            img_roi_src_zoom = cv2.resize(img_roi_src_nocircles, None, fx=upsample_factor, fy=upsample_factor,\
-                                          interpolation=cv2.INTER_NEAREST)
-            img_roi_ref_zoom = cv2.resize(img_roi_ref_nocircles, None, fx=upsample_factor, fy=upsample_factor,\
-                                          interpolation=cv2.INTER_NEAREST)
+            # select roi
+            img_roi_src_nocircles = src_im_gamma[roi_patch_src[1]:roi_patch_src[3], roi_patch_src[0]:roi_patch_src[2]]
+            img_roi_ref_nocircles = a1_gamma[roi_patch_ref[1]:roi_patch_ref[3], roi_patch_ref[0]:roi_patch_ref[2]]
+
+            # take the ref and source patches, adjust the corner point locations on the patches, upsample the patches and then draw circle and epilines
+            # img_src has the epiline and is the ref image ( may need to remove circle and add again at a better location0
+            # img_roi_src is the patch that needs to be resized
+            img_roi_src_zoom = cv2.resize(img_roi_src_nocircles, None, fx=upsample_factor, fy=upsample_factor, interpolation=cv2.INTER_NEAREST)
+            img_roi_ref_zoom = cv2.resize(img_roi_ref_nocircles, None, fx=upsample_factor, fy=upsample_factor, interpolation=cv2.INTER_NEAREST)
 
             patch_point_ref = (patch_size[0]//2 + corner_point_ref[0,0] - x_ref, patch_size[1]//2 + corner_point_ref[0,1] - y_ref)
             patch_point_ref_zoom = (patch_point_ref[0] * upsample_factor, patch_point_ref[1] * upsample_factor)
             img_roi_ref_zoom = cv2.circle(img_roi_ref_zoom, (np.int32(patch_point_ref_zoom[0]),
-                                                             np.int32(patch_point_ref_zoom[1])), 10, (0,0,255), -1)
+                                                             np.int32(patch_point_ref_zoom[1])), 5, (0,0,255), -1)
             if show_image:
                 cv2.imshow("A1_{}_nocircles".format(module_name[cam_idx]), img_roi_ref_zoom)
 
@@ -299,7 +312,10 @@ def SelPatchZoomMarkPointDrawEpilines(undist_img_stack, undist_points_stack, poi
             patch_point_src = (patch_size[0]//2 + corner_point_src[0,0] - x_src, patch_size[1]//2 + corner_point_src[0,1] - y_src)
             patch_point_src_zoom = (patch_point_src[0] * upsample_factor, patch_point_src[1] * upsample_factor)
             img_roi_src_zoom = cv2.circle(img_roi_src_zoom, (np.int32(patch_point_src_zoom[0]),
-                                                             np.int32(patch_point_src_zoom[1])), 10, (0,0,255), -1)
+                                                             np.int32(patch_point_src_zoom[1])), 5, (0,0,255), -1)
+            img_roi_src_zoom, _ = Stereo.drawlinesnew(img_roi_src_zoom, img_roi_ref_zoom,
+                                                      GetUpsampledLine(line_src[0], upsample_factor, patch_size, corner_point_src[0]),
+                                                      pts_src, pts_ref, circle_thickness)
             if show_image:
                 cv2.imshow("{}_nocircles".format(module_name[cam_idx]), img_roi_src_zoom)
 
