@@ -186,7 +186,7 @@ def ReadImageAllCams( image_dir, setup_file, read_image_bin, frame_index, num_ca
 
 
 # get new optimal camera matrix for each of the cameras and undistort image and the correspondence sets
-def GetOptimalNewCamMatricUndistort( img_stack, exr_np, img_size, read_correspondence_type, num_cam=4):
+def GetOptimalNewCamMatricUndistort( img_stack, exr_np, img_size, read_correspondence_type, do_not_undistort=False, num_cam=4):
     K_new = []
     K1_new = np.empty(K[0].shape)
     undist_img_stack = []
@@ -197,7 +197,10 @@ def GetOptimalNewCamMatricUndistort( img_stack, exr_np, img_size, read_correspon
                                                     imageSize=img_size, alpha=0,  newImgSize=img_size)
         K_new.append(K1_new)
         undist_img = cv2.undistort(img_stack[cam_idx], K[cam_idx], D[cam_idx], newCameraMatrix=K_new[cam_idx])
-        undist_img_stack.append(undist_img)
+        if do_not_undistort:
+            undist_img_stack.append(img_stack[cam_idx])
+        else:
+            undist_img_stack.append(undist_img)
 
         # convert to float64 else errors out
         if read_correspondence_type is 'exr':   # YH not sure
@@ -212,7 +215,11 @@ def GetOptimalNewCamMatricUndistort( img_stack, exr_np, img_size, read_correspon
             corner_detected.append(True)
 
         undist_points = cv2.undistortPoints(src=corners, cameraMatrix=K[cam_idx], distCoeffs=D[cam_idx], P=K_new[cam_idx])
-        undist_points_stack.append(undist_points)
+        if do_not_undistort:
+            corners = corners.reshape((836,1,-1)) # YH TODO: FIX magic number 836
+            undist_points_stack.append(corners)
+        else:
+            undist_points_stack.append(undist_points)
 
     return K_new, corner_detected, undist_img_stack, undist_points_stack, roi
 
@@ -237,7 +244,7 @@ def GetUpsampledLine(line, factor, size, shift):
 # Select the patches around the correspondence points, zoom into it based on upsample factor, mark the point with\
 # circle and compute and draw epilines.
 def SelPatchZoomMarkPointDrawEpilines(undist_img_stack, undist_points_stack, point_index, K_new, T, corner_detected,\
-                                      patch_size, upsample_factor, module_name, num_cam=4, show_image=False):
+                                      patch_size, upsample_factor, module_name, draw_epilines=True, num_cam=4, show_image=False):
 
     F_stack = []
     image_patches = []
@@ -256,25 +263,27 @@ def SelPatchZoomMarkPointDrawEpilines(undist_img_stack, undist_points_stack, poi
 
         if corner_detected[cam_idx]:
 
-            estimated_depth.append(ComputeRefDepthGivenCorrespondingPnt( R[cam_idx], T[cam_idx], K_new[cam_idx],\
+            if draw_epilines:
+                estimated_depth.append(ComputeRefDepthGivenCorrespondingPnt( R[cam_idx], T[cam_idx], K_new[cam_idx],\
                                                                          K_new[0], corner_point_src, corner_point_ref))
-            estimated_disparity.append( K_new[0][0, 0] * np.linalg.norm(T[1]) /estimated_depth[cam_idx-1] )
+                estimated_disparity.append( K_new[0][0, 0] * np.linalg.norm(T[1]) /estimated_depth[cam_idx-1] )
 
             y_src = np.int32(np.round(corner_point_src[0,1]))
             x_src = np.int32(np.round(corner_point_src[0,0]))
             roi_patch_src = ( x_src - patch_size[0]//2, y_src - patch_size[1]//2, x_src+patch_size[0]//2 + 1, y_src+patch_size[1]//2 + 1)
 
-            # compute fundamental matrix between each pair
-            F = Stereo.compute_fundamental_matrix(K_new[0], K_new[cam_idx], R[cam_idx], T[cam_idx])
-            F_stack.append(F)
+            if draw_epilines:
+                # compute fundamental matrix between each pair
+                F = Stereo.compute_fundamental_matrix(K_new[0], K_new[cam_idx], R[cam_idx], T[cam_idx])
+                F_stack.append(F)
 
-            # covert correspondence points to Homogeneous co-ordinates
-            pts_ref = cv2.convertPointsToHomogeneous(corner_point_ref)
-            pts_src = cv2.convertPointsToHomogeneous(corner_point_src)
+                # covert correspondence points to Homogeneous co-ordinates
+                pts_ref = cv2.convertPointsToHomogeneous(corner_point_ref)
+                pts_src = cv2.convertPointsToHomogeneous(corner_point_src)
 
-            # compute the epipolar lines
-            line_src = cv2.computeCorrespondEpilines(pts_ref, 1, F).reshape(-1, 3)
-            line_ref = cv2.computeCorrespondEpilines(pts_src, 2, F).reshape(-1, 3)
+                # compute the epipolar lines
+                line_src = cv2.computeCorrespondEpilines(pts_ref, 1, F).reshape(-1, 3)
+                line_ref = cv2.computeCorrespondEpilines(pts_src, 2, F).reshape(-1, 3)
 
             a1_gamma = np.clip(adjust_gamma(undist_img_stack[0].copy(), 2.2),0,255)
             src_im_gamma = np.clip(adjust_gamma(undist_img_stack[cam_idx].copy(), 2.2),0,255)
@@ -313,9 +322,10 @@ def SelPatchZoomMarkPointDrawEpilines(undist_img_stack, undist_points_stack, poi
             patch_point_src_zoom = (patch_point_src[0] * upsample_factor, patch_point_src[1] * upsample_factor)
             img_roi_src_zoom = cv2.circle(img_roi_src_zoom, (np.int32(patch_point_src_zoom[0]),
                                                              np.int32(patch_point_src_zoom[1])), 5, (0,0,255), -1)
-            img_roi_src_zoom, _ = Stereo.drawlinesnew(img_roi_src_zoom, img_roi_ref_zoom,
-                                                      GetUpsampledLine(line_src[0], upsample_factor, patch_size, corner_point_src[0]),
-                                                      pts_src, pts_ref, circle_thickness)
+            if draw_epilines:
+                img_roi_src_zoom, _ = Stereo.drawlinesnew(img_roi_src_zoom, img_roi_ref_zoom,
+                                                          GetUpsampledLine(line_src[0], upsample_factor, patch_size, corner_point_src[0]),
+                                                          pts_src, pts_ref, circle_thickness)
             if show_image:
                 cv2.imshow("{}_nocircles".format(module_name[cam_idx]), img_roi_src_zoom)
 
@@ -348,16 +358,19 @@ args_g, unknown = parser.parse_known_args()
 if unknown:
     print("Unknown options: {}".format(unknown))
 
-#image_helper = Image(args_g.image_dir, rig_setup_file=args_g.setup_file)
-#setupInfo = image_helper.setup_info()
 print("")
 print("Command line options:")
 print("  {}".format(args_g))
 print("")
 
-num_cam = 4
+image_helper = Image(args_g.image_dir, rig_setup_file=args_g.setup_file)
+setupInfo = image_helper.setup_info()
+num_cam = len(setupInfo.RigInfo.cam_position_m)
+nx = setupInfo.ChartInfo.nx
+ny = setupInfo.ChartInfo.ny
 module_name  = ["A1", "A2", "A3", "A4"]
 circle_thickness = 3
+do_not_distort_image = False
 
 show_image = False
 upsample_factor_g = args_g.upsample
@@ -387,24 +400,32 @@ for cam_idx in range(num_cam):
 img_stack_g = ReadImageAllCams( args_g.image_dir, args_g.setup_file, read_image_bin, frame_index_g)
 
 # get new optimal camera matrix for each of the cameras and undistort image and the correspondence sets
-
 [K_new_g, corner_detected_g, undist_img_stack_g, undist_points_stack_g, roi_g] = GetOptimalNewCamMatricUndistort(\
-    img_stack_g, exr_np_g, img_size_g, args_g.read_correspondence_type, num_cam)
+         img_stack_g, exr_np_g, img_size_g, args_g.read_correspondence_type,do_not_distort_image, num_cam)
 
-[image_patches, estimated_depth, estimated_disparity] = SelPatchZoomMarkPointDrawEpilines( undist_img_stack_g,\
-                                        undist_points_stack_g, point_index_g, K_new_g, T,  corner_detected_g,\
-                                        patch_size_g, upsample_factor_g, module_name, num_cam)
+[image_patches, estimated_depth, estimated_disparity] = SelPatchZoomMarkPointDrawEpilines( undist_img_stack_g, \
+         undist_points_stack_g, point_index_g, K_new_g, T,  corner_detected_g, \
+         patch_size_g, upsample_factor_g, module_name, not(do_not_distort_image==True), num_cam)
 
 fig, axes = plt.subplots(2, 2, figsize=(10,10))
-plot_camera(axes[0, 0], "A1: reproj_error = ({:.2f}, {:.2f})".format(reproj_error[0,0], reproj_error[0,1]), image_patches[0])
-plot_camera(axes[0, 1], "A2: reproj_error = ({:.2f}, {:.2f})\n depth:{:.4f}m\ndisparity:{:.2f}".format\
-    (reproj_error[1,0], reproj_error[1,1], estimated_depth[0]/1000, estimated_disparity[0]), image_patches[1])
-plot_camera(axes[1, 0], "A3: reproj_error = ({:.2f}, {:.2f})\n depth:{:.4f}m\n disparity:{:.2f}".format\
-    (reproj_error[2,0], reproj_error[2,1], estimated_depth[1]/1000, estimated_disparity[1]), image_patches[2])
-plot_camera(axes[1, 1], "A4: reproj_error = ({:.2f}, {:.2f})\n depth:{:.4f}m\n disparity:{:.2f}".format\
-    (reproj_error[3,0], reproj_error[3,1], estimated_depth[2]/1000, estimated_disparity[2]), image_patches[3])
-plt.suptitle("Correspondences for point ({:.2f}, {:.2f}) in reference at corner point ({}), error={:.2f}".format\
-         (undist_points_stack_g[0][point_index_g, 0, 0], undist_points_stack_g[0][point_index_g, 0, 1], point_index_g, max_error))
+if  do_not_distort_image:
+    for cam_idx in range(num_cam):
+        plot_camera(axes[cam_idx//2, cam_idx%2], "{}: reproj_error = ({:.2f}, {:.2f})".format \
+            (module_name[cam_idx], reproj_error[cam_idx,0], reproj_error[cam_idx,1]), image_patches[cam_idx])
+
+    plt.suptitle("Correspondences for point ({:.2f}, {:.2f}) in reference at corner point ({}), frame idx = {}, error={:.2f}".format \
+                     (undist_points_stack_g[0][point_index_g, 0, 0], undist_points_stack_g[0][point_index_g, 0, 1], \
+                      np.unravel_index(point_index_g,(ny,nx)), frame_index_g, max_error))
+
+else:
+    plot_camera(axes[0, 0], "A1: reproj_error = ({:.2f}, {:.2f})".format(reproj_error[0,0], reproj_error[0,1]), image_patches[0])
+    for cam_idx in range(1, num_cam):
+        plot_camera(axes[cam_idx//2, cam_idx%2], "{}: reproj_error = ({:.2f}, {:.2f})\n depth:{:.4f}m\ndisparity:{:.2f}".format \
+            (module_name[cam_idx], reproj_error[cam_idx,0], reproj_error[cam_idx,1], estimated_depth[cam_idx-1]/1000, estimated_disparity[cam_idx-1]), image_patches[cam_idx])
+
+    plt.suptitle("Correspondences for point ({:.2f}, {:.2f}) in reference at corner point ({}), frame idx = {}, error={:.2f}".format\
+         (undist_points_stack_g[0][point_index_g, 0, 0], undist_points_stack_g[0][point_index_g, 0, 1],\
+          np.unravel_index(point_index_g,(ny,nx)), frame_index_g, max_error))
 
 top_dir_name = os.path.basename(os.path.dirname(os.path.dirname(args_g.cal_dir)))
 if args_g.read_correspondence_type == "max_reproj_error":
