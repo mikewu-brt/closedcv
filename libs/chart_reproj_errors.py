@@ -3,6 +3,29 @@ import numpy as np
 from matplotlib import pyplot as plt
 from libs.read_fst import load_fst
 
+
+module_name = ["A1", "A2", "A3", "A4"]
+
+
+def chart_mesh_grid(chart_shape=(44,19)):
+    x = np.arange(0, chart_shape[1], 1)
+    y = np.arange(0, chart_shape[0], 1)
+    xx, yy = np.meshgrid(x, y)
+    return xx, yy
+
+
+def black_list(chart_shape=(44,19), markers=[390, 428, 389, 407, 426, 409, 427]):
+    xx, yy = chart_mesh_grid(chart_shape)
+    xend = chart_shape[1]-1
+    yend = chart_shape[0]-1
+    return np.unique(np.hstack(
+        [np.ravel_multi_index(np.where(yy == yend), chart_shape),
+         np.ravel_multi_index(np.where(xx == xend), chart_shape),
+         np.ravel_multi_index(np.where(yy == 0), chart_shape),
+         np.ravel_multi_index(np.where(xx == 0), chart_shape),
+         markers])).astype(int)
+
+
 def plotreproj(filename, outdir):
     if not os.path.exists(outdir):
         os.mkdir(outdir)
@@ -14,41 +37,83 @@ def plotreproj(filename, outdir):
         image_coord = arr[frame, :, [2, 1]].T
         plt.figure()
         avg_10x = 10. * np.average(np.linalg.norm(reproj, axis=1))
-        Q = plt.quiver(image_coord[:, 0], image_coord[:, 1], reproj[:, 0], reproj[:, 1])
-        plt.quiverkey(Q, 0.1, 0.1, avg_10x, np.format_float_scientific(avg_10x, precision=2), labelpos='N', coordinates='axes')
+        q = plt.quiver(image_coord[:, 0], image_coord[:, 1], reproj[:, 0], reproj[:, 1])
+        plt.quiverkey(q, 0.1, 0.1, avg_10x, np.format_float_scientific(avg_10x, precision=2),
+                      labelpos='N', coordinates='axes')
         plt.xlabel(filename + "_frame_" + str(frame))
         plt.savefig(outdir + "/frame_" + str(frame) + "_rerrors.png")
         plt.close()
     plt.figure()
     reproj = arr[:, :, [0, 3]]
     plt.plot(np.average(np.linalg.norm(reproj, axis=2), axis=1))
-    plt.xlabel("View error for " + filename )
-    plt.savefig( outdir + "/view_errors.png")
+    plt.xlabel("View error for " + filename)
+    plt.savefig(outdir + "/view_errors.png")
     plt.close()
     print("done " + filename)
-
 
 
 def pproj(dirname, file_prefix, outdir_prefix, num_cams=4):
     for cam in range(num_cams):
         plotreproj(dirname + "/" + file_prefix + str(cam) + ".fst", dirname + "/" + outdir_prefix + str(cam))
 
+
+def plot_view_errors_orientations(folder, title, prefix_rerror="reproj", prefix_rot="rotations", prefix_trans="translations"):
+    rerrors = collect_reprojection_errors(folder, prefix_rerror)[:, :, :, 2:]
+    verrs = np.average(np.linalg.norm(rerrors, axis=3), axis=2)
+    max_verrs = np.max(verrs, axis=1)
+    rotations = np.linalg.norm(collect_rotations(folder, prefix_rot), axis=1)
+    translations = np.linalg.norm(collect_translations(folder, prefix_trans), axis=1)
+    max_rot = np.max(rotations)
+    rotations = rotations / max_rot
+    max_trans = np.max(translations)
+    translations = translations / max_trans
+    num_cams = verrs.shape[0]
+    fig, axes = plt.subplots(2, int((num_cams + 1)/2), figsize=(12, 8))
+    for cam in range(num_cams):
+        pindex = np.unravel_index(cam, axes.shape)
+        axes[pindex].plot(verrs[cam]/max_verrs[cam], label="view_error")
+        axes[pindex].plot(rotations, label="rotations")
+        axes[pindex].plot(translations, label="translations")
+        axes[pindex].set_title("Max error: {:.2f}".format(max_verrs[cam]))
+        axes[pindex].legend()
+    fig.suptitle("{} - max rotation(degrees): {:.2f}, max translation: {:.2f}".format(title, max_rot, max_trans))
+    return fig
+
+
+def compare_view_errors(rerrors, labels, title, metric="max"):
+    num_cams = rerrors[0].shape[0]
+    fig, axes = plt.subplots(2, int((num_cams + 1)/2), figsize=(12, 8))
+    for cam in range(num_cams):
+        pindex = np.unravel_index(cam, axes.shape)
+        for ir in range(len(rerrors)):
+            r = rerrors[ir][cam, :, :, 2:]
+            if metric == "max":
+                axes[pindex].plot(np.max(np.linalg.norm(r, axis=2), axis=1), label=labels[ir])
+            else:
+                axes[pindex].plot(np.average(np.linalg.norm(r, axis=2), axis=1), label=labels[ir])
+        axes[pindex].legend()
+        axes[pindex].set_title(title + " for camera {}".format(module_name[cam]))
+    return fig
+
+
+def plot_view_errors(rerrors, title):
+    num_cams = rerrors.shape[0]
+    fig, ax = plt.subplots()
+    for cam in range(num_cams):
+        r = rerrors[cam, :, :, 2:]
+        ax.plot(np.average(np.linalg.norm(r, axis=2), axis=1), label=module_name[cam])
+    ax.legend()
+    ax.set_title(title)
+    return fig
+
+
 def collect_translations(dirname, file_prefix):
-    cam_translation = load_fst(os.path.join(dirname, file_prefix  + ".fst"))
-    print(cam_translation)
-    rshape = cam_translation.shape
-    print(rshape)
-    translation = np.zeros((rshape[0], rshape[1]))
-    translation[ :, :] = cam_translation[:, :]
-    return translation
+    return load_fst(os.path.join(dirname, file_prefix + ".fst"))
+
 
 def collect_rotations(dirname, file_prefix):
-    cam_rotations = load_fst(os.path.join(dirname, file_prefix  + ".fst"))
-    rshape = cam_rotations.shape
-    print(rshape)
-    rotations = np.zeros((rshape[0], rshape[1]))
-    rotations[ :, :] = cam_rotations[:, :]
-    return rotations
+    return load_fst(os.path.join(dirname, file_prefix + ".fst"))
+
 
 def collect_reprojection_errors(dirname, file_prefix, num_cams=4):
     cam_reproj = load_fst(os.path.join(dirname, file_prefix + str(0) + ".fst"))
@@ -73,8 +138,9 @@ def get_valid_points(reproj_errors):
         valid.append(np.delete(rcam, invalid, axis=0))
     return valid
 
-def plot_reprojection_errors(folder, prefix, chart_shape=(44,19)):
-    reproj_errors = collect_reprojection_errors(folder, prefix)
+
+def plot_reprojection_errors(folder, file_prefix, chart_shape=(44, 19)):
+    reproj_errors = collect_reprojection_errors(folder, file_prefix)
     valid = get_valid_points(reproj_errors)
     cam_index = 0
     fig1, together = plt.subplots()
@@ -88,13 +154,18 @@ def plot_reprojection_errors(folder, prefix, chart_shape=(44,19)):
         x = np.arange(0, chart_shape[1], 1)
         y = np.arange(0, chart_shape[0], 1)
         xx, yy = np.meshgrid(x, y)
-        scatter = axes[0, cam_index].scatter(xx, yy, s=nerrors*100)
-        axes[0, cam_index].set_title("Average absolute reprojection errors for camera {}\nMax Error {:.2f} at {}".format(cam_index, max_error, corner))
+        axes[0, cam_index].scatter(xx, yy, s=nerrors*100)
+        axes[0, cam_index].set_title(
+            "Average absolute reprojection errors for camera {}\nMax Error {:.2f} at {}".format(
+                cam_index, max_error, corner))
         xerrors = np.average(cam_errors[:, :, 0], axis=0)
         yerrors = np.average(cam_errors[:, :, 1], axis=0)
-        Q = axes[1, cam_index].quiver(xx, yy, xerrors, yerrors, scale=7.5)
-        axes[1, cam_index].quiverkey(Q, -0.1, -0.1, 0.75, np.format_float_scientific(0.75, precision=2), labelpos='N', coordinates='axes')
-        axes[1, cam_index].set_title("Average for camera {}, chart error: {:.2E}, {:.2E}".format(cam_index, np.average(xerrors), np.average(yerrors)))
+        q = axes[1, cam_index].quiver(xx, yy, xerrors, yerrors, scale=7.5)
+        axes[1, cam_index].quiverkey(q, -0.1, -0.1, 0.75, np.format_float_scientific(0.75, precision=2),
+                                     labelpos='N', coordinates='axes')
+        axes[1, cam_index].set_title(
+            "Average for camera {}, chart error: {:.2E}, {:.2E}".format(
+                cam_index, np.average(xerrors), np.average(yerrors)))
         cam_index += 1
     fig1.suptitle(folder)
     fig2.suptitle(folder)
@@ -112,3 +183,11 @@ def plot_chart_deviations(folder, short_title, filename="chart.fst"):
     plt.title(short_title)
     plt.savefig(os.path.join(folder, short_title + "_chart.png"))
     plt.close()
+
+
+def view_errors(folders, labels, title="Max view errors", metric="max"):
+    prefix = "reproj"
+    rerrors = list()
+    for f in folders:
+        rerrors.append(collect_reprojection_errors(f, prefix))
+    return compare_view_errors(rerrors, labels, title, metric)
