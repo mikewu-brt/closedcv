@@ -99,7 +99,7 @@ def ComputeRefDepthGivenCorrespondingPnt( rotation_ref_wrt_src, translation_ref_
 # (2) read the correcpondence points from an npy file
 # (3) use the provided option arguments
 #def GetCorrespondencePoints( args ):
-def GetCorrespondencePoints( cal_dir, read_correspondence_type, correspondence_file, frame_num, point_idx ):
+def GetCorrespondencePoints( cal_dir, read_correspondence_type, correspond_file, frame_num, point_idx, use_manual=False ):
     exr_np = None
     dir_name = cal_dir
     image_read_bin = True
@@ -110,6 +110,9 @@ def GetCorrespondencePoints( cal_dir, read_correspondence_type, correspondence_f
         [index, exr_np, max_error, reproj_error] = estimate_correspondence_based_on_reproj_errors (dir_name, chosen_idx=0)
         frame_index = index[0][0]
         point_index = index[1][0]
+        if use_manual:
+            frame_index = frame_num
+            point_index = point_idx
     elif read_correspondence_type == "exr":
         # read EXR correspondence files
         point_index = point_idx
@@ -121,7 +124,7 @@ def GetCorrespondencePoints( cal_dir, read_correspondence_type, correspondence_f
         # read npy correspondence file
         point_index = point_idx
         frame_index = frame_num
-        filename = correspondence_file
+        filename = correspond_file
         image_read_bin = False
         print("Correspondences file", filename)
         exr_np = np.load(filename, allow_pickle=True)
@@ -257,7 +260,7 @@ def SelPatchZoomMarkPointDrawEpilines(undist_img_stack, undist_points_stack, poi
         corner_point_ref = undist_points_stack[0][point_index]
         y_ref = np.int32(np.round(corner_point_ref[0,1]))
         x_ref = np.int32(np.round(corner_point_ref[0,0]))
-        roi_patch_ref = ( x_ref - patch_size[0]//2, y_ref - patch_size[1]//2, x_ref+patch_size[0]//2 + 1, y_ref+patch_size[1]//2 + 1)
+        roi_patch_ref = ( max(0,x_ref - patch_size[0]//2), max(0, y_ref - patch_size[1]//2), min(x_ref+patch_size[0]//2 + 1, 3208), min(y_ref+patch_size[1]//2 + 1, 2200))
 
         corner_point_src = undist_points_stack[cam_idx][point_index]
 
@@ -270,7 +273,7 @@ def SelPatchZoomMarkPointDrawEpilines(undist_img_stack, undist_points_stack, poi
 
             y_src = np.int32(np.round(corner_point_src[0,1]))
             x_src = np.int32(np.round(corner_point_src[0,0]))
-            roi_patch_src = ( x_src - patch_size[0]//2, y_src - patch_size[1]//2, x_src+patch_size[0]//2 + 1, y_src+patch_size[1]//2 + 1)
+            roi_patch_src = ( max(0, x_src - patch_size[0]//2), max(0,y_src - patch_size[1]//2), min(3208, x_src+patch_size[0]//2 + 1), min(2200, y_src+patch_size[1]//2 + 1))
 
             if draw_epilines:
                 # compute fundamental matrix between each pair
@@ -340,13 +343,12 @@ parser = argparse.ArgumentParser(description="Auto Epiviz")
 parser.add_argument('--image_dir', default='/Users/amaharshi/debug/autoviz/5_3_raw')
 parser.add_argument('--setup_file', default='/Users/amaharshi/debug/autoviz/5_3_raw/setup.py')
 parser.add_argument('--cal_dir', default='/Users/amaharshi/debug/z_k_3/zero_k_3_factory/3_5_zero_k_3_save_rt_cv_init_ref_fppd/cv_bypassed')
-parser.add_argument('--correspondence_file', default='/Users/amaharshi/debug/autoviz/Pine_3_5_corr/Pine_3_5_corr5.npy')
+parser.add_argument('--correspond_file', default='/Users/amaharshi/debug/autoviz/Pine_3_5_corr/Pine_3_5_corr5.npy')
+parser.add_argument('--do_not_distort_image', action="store_true", default=False, help='set this option to True if you just want to look at corner point detector output zommed in')
 parser.add_argument('--upsample', type=int, default=15)
 parser.add_argument('--patch_size', type=int, default=33)
 parser.add_argument('--point_idx', type=int, default=0)
 parser.add_argument('--frame_num', type=int, default=0)
-parser.add_argument('--image_width', type=int, default=3208)
-parser.add_argument('--image_height', type=int, default=2200)
 parser.add_argument('--read_correspondence_type', default='max_reproj_error', help='max_reproj_error:\
                     compute from rerrorx.fst, npy: use correspondence npy file, exr: read exr files and bin images\
                      and will need frame_num and point_index ')
@@ -370,12 +372,15 @@ nx = setupInfo.ChartInfo.nx
 ny = setupInfo.ChartInfo.ny
 module_name  = ["A1", "A2", "A3", "A4"]
 circle_thickness = 3
-do_not_distort_image = False
+do_not_distort_image = args_g.do_not_distort_image
+use_manual = False
 
 show_image = False
 upsample_factor_g = args_g.upsample
 patch_size_g = (args_g.patch_size, args_g.patch_size)
-img_size_g = (args_g.image_height, args_g.image_width)
+image_width = 3208
+image_height = 2200
+img_size_g = (image_height, image_width)
 
 # read the calibration files
 K = []
@@ -394,7 +399,7 @@ for cam_idx in range(num_cam):
 
 #  Get the correspondence points and the frame number and point index
 [read_image_bin, frame_index_g, point_index_g, exr_np_g, max_error, reproj_error] = GetCorrespondencePoints( \
-    args_g.cal_dir, args_g.read_correspondence_type, args_g.correspondence_file, args_g.frame_num, args_g.point_idx )
+    args_g.cal_dir, args_g.read_correspondence_type, args_g.correspond_file, args_g.frame_num, args_g.point_idx, use_manual )
 
 # read the images corresponding to the frame number
 img_stack_g = ReadImageAllCams( args_g.image_dir, args_g.setup_file, read_image_bin, frame_index_g)
@@ -410,7 +415,8 @@ img_stack_g = ReadImageAllCams( args_g.image_dir, args_g.setup_file, read_image_
 fig, axes = plt.subplots(2, 2, figsize=(10,10))
 if  do_not_distort_image:
     for cam_idx in range(num_cam):
-        plot_camera(axes[cam_idx//2, cam_idx%2], "{}: reproj_error = ({:.2f}, {:.2f})".format \
+        if corner_detected_g[cam_idx]:
+            plot_camera(axes[cam_idx//2, cam_idx%2], "{}: reproj_error = ({:.2f}, {:.2f})".format \
             (module_name[cam_idx], reproj_error[cam_idx,0], reproj_error[cam_idx,1]), image_patches[cam_idx])
 
     plt.suptitle("Correspondences for point ({:.2f}, {:.2f}) in reference at corner point ({}), frame idx = {}, error={:.2f}".format \
@@ -433,9 +439,10 @@ if args_g.read_correspondence_type == "max_reproj_error":
     filename = args_g.image_dir + "/{}_{}_corres_{}_{}.png".format(
         top_dir_name, os.path.basename(args_g.cal_dir), frame_index_g, point_index_g)
 else:
-    filename = args_g.image_dir + "/{}_{}_corres_{}.png".format(
-        top_dir_name, os.path.basename(args_g.cal_dir),os.path.basename\
-            (args_g.correspondence_file).split('/')[-1].replace('.npy',''))
+    filename = args_g.image_dir + "/{}_corres_{}.png".format(
+        top_dir_name, os.path.basename\
+            (args_g.correspond_file))
+
 
 print("Correspondence image output to file: ", filename)
 plt.savefig(filename)
