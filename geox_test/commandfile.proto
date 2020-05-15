@@ -1,0 +1,156 @@
+syntax = "proto3";
+
+package DepthHwTest;
+
+enum ImageType
+{
+    INVALID_IMAGE        = 0;
+    REFERENCE_IMAGE      = 1;
+    SOURCE_IMAGE         = 2;
+}
+
+enum MessageID
+{
+    INVALID_MESSAGE_ID        = 0;
+    DISTORTION_MAP            = 1;
+    VIGNETTING_MAP            = 2;
+    CONFIGURATION             = 3;
+    PROCESS_IMAGE             = 4;
+}
+
+enum ProcessingRequest
+{
+    INVALID                   = 0;
+    SRC_UNDISTORT_REQUEST     = 1;
+    REF_UNDISTORT_REQUEST     = 2;
+    DEPTH_FILTER_REQUEST      = 3;
+}
+
+// Commands do not have a response, request messages always get a response
+enum MessageType
+{
+    INVALID_COMMAND      = 0;
+    COMMAND              = 1;
+    REQUEST              = 2;
+    RESPONSE             = 3;
+}
+
+message MessageDescriptor
+{
+    MessageID         message_id = 1;
+    MessageType       message_type = 2;
+}
+
+// Structure to hold 3 x 3 matrix (floating point precision)
+message Matrix3x3F
+{
+    /// Writing this in a row major format
+    float x00 = 1;        // matrix(0,0)
+    float x01 = 2;        // matrix(0,1)
+    float x02 = 3;        // matrix(0,2)
+    float x10 = 4;        // matrix(1,0)
+    float x11 = 5;        // matrix(1,1)
+    float x12 = 6;        // matrix(1,2)
+    float x20 = 7;        // matrix(2,0)
+    float x21 = 8;        // matrix(2,1)
+    float x22 = 9;        // matrix(2,2)
+}
+
+message Configuration
+{
+    int32           y_stride      = 1;
+    int32           black_level   = 2;
+    // should be in Bayer pixel order and should include
+    // all pixels
+    repeated float  channel_gains = 3;
+}
+
+message UndistortParameters
+{
+    Matrix3x3F        transform         = 1;
+}
+
+message PMAParameters
+{
+    int32             patch_width       = 1;
+    int32             patch_height      = 2;
+    int32             number_of_passes  = 3;
+    //need format for distortion match values
+}
+
+message PMADebugParameters
+{
+    uint32            place_holder  = 1;
+}
+
+message DRFParameters
+{
+    uint32            place_holder  = 1;
+}
+
+message ImageMapInfo
+{
+    string                        file_path   = 1;
+    int32                         pid         = 2;
+    int32                         fd          = 3;
+    int32                         width       = 4;
+    int32                         height      = 5;
+    int32                         length      = 6;
+    ImageType                     type        = 7;
+    string                        script_path = 8;
+    string                        script_args = 9;
+}
+
+message ProcessImage
+{
+    uint64                     frame_id                   = 1;
+    UndistortParameters        undistort_params           = 2;
+    PMAParameters              pma_config                 = 3;
+    DRFParameters              drf_config                 = 4;
+    PMADebugParameters         pma_debug                  = 5;
+    repeated ProcessingRequest process_image_req          = 6;
+    repeated ImageMapInfo      image_files                = 7;
+    repeated ImageMapInfo      processed_image_files      = 8;
+}
+
+message TestCaseSetup
+{
+    int32                                   timeout_in_milli_secs  = 1;
+    Configuration                           config                 = 2;
+    repeated ProcessImage                   image_command          = 3;
+    repeated ImageMapInfo                   distortion_map         = 4;
+    repeated ImageMapInfo                   vignetting_map         = 5;
+    repeated MessageDescriptor              message_order          = 6; 
+}
+
+message TestCase
+{
+    string                 test_name           = 1;
+    repeated TestCaseSetup test_setup          = 2;
+}
+
+message TestRun
+{
+    repeated TestCase      test_case_run = 1;
+}
+
+message TestRequest
+{
+    MessageDescriptor message_desc     = 1; 
+    uint32            transaction_id   = 2;
+    int32             address_length   = 3;
+    bytes             client_address   = 4;
+    Configuration     config           = 5;
+    ProcessImage      image_command    = 6;
+    ImageMapInfo      distortion_map   = 7;
+    ImageMapInfo      vignetting_map   = 8;
+}
+
+message TestResponse
+{
+    MessageDescriptor        message_desc     = 1; 
+    uint32                   transaction_id   = 2;
+    uint32                   status           = 3;
+    repeated ImageMapInfo    image_files      = 4;
+}
+
