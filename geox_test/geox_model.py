@@ -179,6 +179,12 @@ model_out = np.multiply(model_out, gains)
 # Adjust gain
 model_out = model_out * (65535.0 / 4096.0)
 
+# Zero out first and last 3 PQ
+model_out[0:3, :, :] = 0.0
+model_out[:, 0:3, :] = 0.0
+model_out[:, -2:-1, :] = 0.0
+model_out[:, -1, :] = 0.0
+
 
 # Convert to image pixels and plot
 reference = np.empty((height_raw, width_raw))
@@ -200,9 +206,6 @@ expected[1::2, ::2] = model_out[:, :, 2]
 expected[1::2, 1::2] = model_out[:, :, 3]
 
 difference = processed - expected
-difference[0:5, :] = 0.0
-difference[:, 0:4] = 0.0
-
 
 plt.figure(1).clear()
 plt.imshow(expected)
@@ -218,6 +221,11 @@ plt.figure(3).clear()
 plt.imshow(difference)
 plt.colorbar()
 plt.title('HW Output - Expected')
+
+plt.figure(4).clear()
+plt.imshow(reference)
+plt.colorbar()
+plt.title('Reference')
 
 print("0")
 
