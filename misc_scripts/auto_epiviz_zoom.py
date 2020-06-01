@@ -20,14 +20,12 @@ import importlib
 import argparse
 from libs.Image import *
 import json
-import OpenEXR
-import Imath
 from libs.LensDistortion import *
 from libs.Stereo import *
 from libs.parse_calib_data import *
 from libs.chart_reproj_errors import *
 import matplotlib as matplot
-matplot.use('TkAgg')
+matplot.use('MacOSX')
 import matplotlib.pyplot as plt
 
 
@@ -37,6 +35,8 @@ def plot_camera(ax, title, img):
     ax.set_axis_off()
 
 def convert_exr_image(exrfile):
+    import OpenEXR
+    import Imath
     exr = OpenEXR.InputFile(exrfile)
     DW = exr.header()['dataWindow']
     rows, cols = (DW.max.y - DW.min.y + 1, DW.max.x - DW.min.x + 1)
@@ -388,7 +388,7 @@ R = []
 T = []
 D = []
 
-filename = args_g.cal_dir + "/light_header.json"
+filename = args_g.cal_dir + "/light_header_5_3_tang_chart.json"
 for cam_idx in range(num_cam):
     [K1, R1, T1, D1] = parse_light_header( read_lightheader(filename), cam_idx)
     K.append(K1)

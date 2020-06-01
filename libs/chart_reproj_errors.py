@@ -177,7 +177,7 @@ def plot_chart_deviations(folder, short_title, filename="chart.fst"):
     chart = load_fst(os.path.join(folder, filename))
     orig = chart[:, :2]
     error = chart[:, 2:]
-    plt.figure()
+    plt.figure(figsize=(5,11))
     Q = plt.quiver(orig[:, 0], orig[:, 1], -error[:, 0], -error[:, 1], scale=50)
     plt.quiverkey(Q, -0.1, -0.1, 2, "2mm", labelpos='N', coordinates='axes')
     plt.title(short_title)

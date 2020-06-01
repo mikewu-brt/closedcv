@@ -1,6 +1,7 @@
 import json
 import lt_protobuf.light_header.lightheader_pb2 as lightheader_pb2
 import numpy as np
+import os
 
 from google.protobuf import json_format
 
@@ -61,6 +62,20 @@ def parse_light_header(lightheader, cam_idx):
     return K, R, T, D
 
 
+def parse_lightheader_all(filename, num_cams=4):
+    K = np.zeros((num_cams, 3, 3))
+    R = np.zeros((num_cams, 3, 3))
+    T = np.zeros((num_cams, 3, 1))
+    D = np.zeros((num_cams, 5, 1))
+
+    header = read_lightheader(filename)
+
+    for cam in range(num_cams):
+        K[cam], R[cam], T[cam], D[cam] = parse_light_header(header, cam)
+
+    return K, R, T, D
+
+
 def parse_calib_data(calibdata, check_dist_norm = False):
     K = np.zeros((3, 3))
     R = np.zeros((3, 3))
@@ -113,3 +128,53 @@ def parse_calib_data(calibdata, check_dist_norm = False):
 
 def parse_calib_data_file(filename, check_dist_norm=False):
     return parse_calib_data(json.load(open(filename, 'r')), check_dist_norm)
+
+def parse_calib_data_folder(folder, fileprefix="calib", num_cams=4):
+    K = np.zeros((num_cams, 3, 3))
+    R = np.zeros((num_cams, 3, 3))
+    T = np.zeros((num_cams, 3, 1))
+    D = np.zeros((num_cams, 5, 1))
+
+    for cam in range(num_cams):
+        filename = os.path.join(folder, fileprefix + "{}.json".format(cam))
+        K[cam], R[cam], T[cam], D[cam] = parse_calib_data_file(filename)
+
+    return K, R, T, D
+
+
+def light_vignetting(full_vig, roi):
+        height, width, _ = full_vig.shape
+        w_step = int(width / roi[0])
+        w = w_step * roi[0]
+        ws = int((width - w) / 2)
+        h_step = int(height / roi[1])
+        h = h_step * roi[1]
+        hs = int((height - h) / 2)
+
+        vig = np.empty((roi[1], roi[0]))
+        for y_idx in range(roi[1]):
+            ys = y_idx * h_step + hs
+            ye = ys + h_step
+            for x_idx in range(roi[0]):
+                xs = x_idx * w_step + ws
+                xe = xs + w_step
+                vig[y_idx, x_idx] = np.average(full_vig[ys:ye, xs:xe, 0])
+        return vig
+
+
+def convert_vignetting(npy_folder, infile, outfile):
+    module_name = ["A1", "A2", "A3", "A4"]
+    calib = json.load(open(infile, 'r'))
+    npy_prefix = "lens_shading_"
+    cam_index = 0
+    for module in module_name:
+        vig = np.load(npy_folder + "/" + npy_prefix+module_name[cam_index]+".npy")
+        vig = light_vignetting(vig, (17, 13))
+        print(calib["module_calibration"][cam_index]["camera_id"])
+        assert(calib["module_calibration"][cam_index]["camera_id"] == module_name[cam_index])
+        calib["module_calibration"][cam_index]["vignetting"]["vignetting"][0]["vignetting"]["data"] = list(vig.reshape(-1))
+        cam_index += 1
+    calib_str = json.dumps(calib)
+    fid = open(outfile, 'w')
+    fid.write(calib_str)
+    fid.close()
