@@ -1,7 +1,6 @@
 import json
 import lt_protobuf.light_header.lightheader_pb2 as lightheader_pb2
 import numpy as np
-import os
 
 from google.protobuf import json_format
 
@@ -10,13 +9,24 @@ def write_lightheader(lightheader, filename):
     open(filename, 'w').write(json_str)
 
 
+def parse_hwinfo(hwinfo):
+    return hwinfo.hw_info
+
+def parse_photometric(photometric, cam_idx):
+    height = photometric.module_calibration[cam_idx].vignetting.vignetting[0].vignetting.height
+    width = photometric.module_calibration[cam_idx].vignetting.vignetting[0].vignetting.width
+    vig_map = photometric.module_calibration[cam_idx].vignetting.vignetting[0].vignetting.data
+    vig_map_array = np.array(vig_map[:])
+    vig_map_array = vig_map_array.reshape((height,width))
+    return vig_map_array
+
 def read_lightheader(filename):
     json_str = open(filename, 'r').read()
     lightheader = lightheader_pb2.LightHeader()
     json_format.Parse(json_str, lightheader)
     return lightheader
 
-def parse_light_header(lightheader, cam_idx):
+def parse_geometric(lightheader, cam_idx):
     K = np.zeros((3, 3))
     R = np.zeros((3, 3))
     T = np.zeros((3, 1))

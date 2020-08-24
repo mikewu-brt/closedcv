@@ -38,7 +38,7 @@ if unknown:
     print("Unknown options: {}".format(unknown))
 
 
-use_lens_shading = True
+use_lens_shading = False
 
 ####################
 
@@ -62,9 +62,11 @@ while not all_files_read:
             all_files_read = True
             break
 
-        img = lens_distortion[cam_idx].correct_vignetting(img_tmp, None,apply_flag=use_lens_shading,
+        if use_lens_shading:
+            img = lens_distortion[cam_idx].correct_vignetting(img_tmp, None,apply_flag=use_lens_shading,
                                                               alpha=0.7)
-
+        else:
+            img = img_tmp
 
         img2 = cv2.resize(img, None, fx=display_size, fy=display_size)
         cv2.imshow("{}".format(setupInfo.RigInfo.module_name[cam_idx]), img2)

@@ -21,7 +21,7 @@ from libs.CalibrationInfo import *
 
 class Stereo:
 
-    def __init__(self, image_dir, img_shape=None):
+    def __init__(self, image_dir, img_shape=None, cal_info=None):
         """
         Initialize camera matrices.
 
@@ -35,7 +35,10 @@ class Stereo:
 
         self.__setup = importlib.import_module("{}.setup".format(image_dir))
 
-        self.__cal_info = CalibrationInfo(cal_dir=image_dir, calibration_json_fname="calibration.json")
+        if cal_info is None:
+            self.__cal_info = CalibrationInfo(cal_dir=image_dir, calibration_json_fname="calibration.json")
+        else:
+            self.__cal_info = cal_info
 
         if img_shape is None:
             # Read an image file to determine the size
@@ -135,6 +138,28 @@ class Stereo:
                                  self.__img_shape,
                                  self.__cal_info.R(cam_idx),
                                  self.__cal_info.T(cam_idx))
+
+    def rectification_transforms(self, cam_idx):
+        R1, R2, P1, P2, Q, roi1, roi2 = self.rectification_matrix(cam_idx)
+        pts0 = np.array([[0, 0], [0, 1], [1, 0], [1, 1]], dtype=np.float32)
+
+        mapx1, mapy1 = cv2.initUndistortRectifyMap(self.__cal_info.K(0), self.__cal_info.D(0),
+                                                   R1, P1, (2, 2), cv2.CV_32F)
+        pts_ref = np.hstack((mapy1.reshape(4, 1), mapx1.reshape(4, 1)))
+        m1 = cv2.getPerspectiveTransform(pts0, pts_ref)
+
+        mapx2, mapy2 = cv2.initUndistortRectifyMap(self.__cal_info.K(cam_idx), self.__cal_info.D(cam_idx),
+                                                   R2, P2, (2, 2), cv2.CV_32F)
+        pts_src = np.hstack((mapy2.reshape(4, 1), mapx2.reshape(4, 1)))
+        m2 = cv2.getPerspectiveTransform(pts0, pts_src)
+
+        return m1, m2
+
+    def asic_rectification_transforms(self, cam_idx):
+        m1, m2 = self.rectification_transforms(cam_idx)
+        m1i = np.linalg.inv(m1)
+        m2i = np.linalg.inv(m2)
+        return m1i, m2i
 
     def homography_inf(self, cam_idx):
         return Stereo.compute_homography_inf(self.__cal_info.K(0), self.__cal_info.K(cam_idx), self.__cal_info.R(cam_idx))

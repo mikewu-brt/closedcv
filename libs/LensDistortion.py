@@ -89,6 +89,28 @@ class LensDistortion:
                 vig[y_idx, x_idx] = np.average(self.__lens_shade_filter[ys:ye, xs:xe, 0])
         return vig
 
+    # expand vignetting map to match FPGA requirements (roi = (70,102))
+    def convert_json_vignetting_fpga(self, roi, json_vig):
+        # Back out the knot locations of the JSON vignetting locations
+        json_h, json_w = json_vig.shape
+        w_step = int(roi[0] / json_w)
+        w_start = int((roi[0] - w_step * (json_w-1)) / 2)
+        x = np.arange(w_start, w_start + w_step * json_w, w_step)
+        h_step = int(roi[1] / json_h)
+        h_start = int((roi[1] - h_step * (json_h-1)) / 2)
+        y = np.arange(h_start, h_start + h_step * json_h, h_step)
+
+        f = scipy.interpolate.RegularGridInterpolator((y, x), json_vig, method='linear', bounds_error=False, fill_value=None)
+
+        x = np.arange(roi[0])
+        y = np.arange(roi[1])
+        y, x = np.meshgrid(y, x, indexing='ij')
+        pts = np.array([y.reshape(-1), x.reshape(-1)]).T
+        lens_shade_filter = np.empty((roi[1], roi[0]))
+
+        lens_shade_filter[:, :] = f(pts).reshape(roi[1], roi[0])
+        return lens_shade_filter
+
     def convert_json_vignetting(self, json_vig):
         # Extrapolate the JSON vignetting into a full sensor
         if self.__vig_setup is None:
@@ -220,9 +242,7 @@ class LensDistortion:
                 lens_shade_filter = lens_shade_filter[:, :, 0]
             image_normalized = img * lens_shade_filter * alpha
             max_val = np.max(image_normalized)
-            print("max value: {}".format(max_val))
             image_normalized[image_normalized > max_limit] = max_limit
-            print("Normalized max value: {}".format(np.max(image_normalized)))
             img = image_normalized.astype(np.uint16)
 
         if scale_to_8bit:
