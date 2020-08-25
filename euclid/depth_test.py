@@ -95,8 +95,15 @@ plt.title("A1")
 
 
 # Compute transformation matrices
-m1i, m2i = stereo.asic_rectification_transforms(a2_idx)
+m1i, m2i = stereo.asic_rectification_transforms(a2_idx, True)
 m1, m2 = stereo.rectification_transforms(a2_idx)
 
 img1 = cv2.warpPerspective(img_a1, m1, (width, height))
+img2 = cv2.warpPerspective(img_a2, m2, (width, height))
+
+img1_img2 = cv2.addWeighted(img1, 0.5, img2, 0.5, 0.0)
+plt.figure(11).clear()
+plt.imshow(img1_img2)
+plt.title("Img1_Img2")
+
 

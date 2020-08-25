@@ -151,14 +151,29 @@ class Stereo:
         mapx2, mapy2 = cv2.initUndistortRectifyMap(self.__cal_info.K(cam_idx), self.__cal_info.D(cam_idx),
                                                    R2, P2, (2, 2), cv2.CV_32F)
         pts_src = np.hstack((mapy2.reshape(4, 1), mapx2.reshape(4, 1)))
-        m2 = cv2.getPerspectiveTransform(pts0, pts_src)
+        m2 = cv2.getPerspectiveTransform(pts_src, pts0)
 
         return m1, m2
 
-    def asic_rectification_transforms(self, cam_idx):
+    @staticmethod
+    def log_matrix(m33):
+        for y in range(3):
+            for x in range(3):
+                print("\"x{}{}\": {},".format(y, x, m33[y, x]))
+
+    def asic_rectification_transforms(self, cam_idx, log=False):
         m1, m2 = self.rectification_transforms(cam_idx)
         m1i = np.linalg.inv(m1)
         m2i = np.linalg.inv(m2)
+
+        if log:
+            print("Reference")
+            self.log_matrix(m1i)
+            print("")
+            print("Source")
+            self.log_matrix(m2i)
+            print("")
+
         return m1i, m2i
 
     def homography_inf(self, cam_idx):
