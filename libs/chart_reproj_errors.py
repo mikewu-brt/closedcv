@@ -152,7 +152,7 @@ def plot_reprojection_errors(folder, file_prefix, num_cams = 6, chart_shape=(44,
     valid = get_valid_points(reproj_errors)
     cam_index = 0
     fig1, together = plt.subplots()
-    fig2, axes = plt.subplots(2, num_camsi, figsize=(24, 8))
+    fig2, axes = plt.subplots(2, num_cams, figsize=(24, 8))
     for cam_errors in valid:
         nerrors = np.average(np.linalg.norm(cam_errors, axis=2), axis=0)
         index = np.argmax(nerrors)
