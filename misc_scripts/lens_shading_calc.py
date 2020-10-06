@@ -64,6 +64,7 @@ while not all_files_read:
             gain = (1/gray) * max_val
             if args.filter_size > 0:
                 gain = ndimage.convolve(gain, k, mode='nearest')
+            gain = gain / np.min(gain)
             img_new = np.empty(img.shape)
             img_new[:,:,0] = gain
             img_new[:,:,1] = gain

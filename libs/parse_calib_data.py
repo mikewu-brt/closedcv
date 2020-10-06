@@ -171,6 +171,18 @@ def light_vignetting(full_vig, roi):
                 vig[y_idx, x_idx] = np.average(full_vig[ys:ye, xs:xe, 0])
         return vig
 
+kstring = 'fjkltheg5$@^@$gf'
+class JSONSpecialEncoder(json.JSONEncoder):
+    def default(self, obj):
+        if type(obj) is np.ndarray:
+            return kstring + repr(obj.flatten().tolist()).replace(' ', '') + kstring
+        else:
+            return super().default(obj)
+
+def format_json(infile, outfile):
+    strdata = json.dumps(json.load(open(infile, 'r')), indent=2, cls=JSONSpecialEncoder)
+    with open(outfile, 'w') as f:
+        f.write(strdata.replace('"' + kstring, '').replace(kstring + '"', ''))
 
 def convert_vignetting(npy_folder, infile, outfile):
     module_name = ["A1", "A2", "A3", "A4"]
@@ -184,7 +196,6 @@ def convert_vignetting(npy_folder, infile, outfile):
         assert(calib["module_calibration"][cam_index]["camera_id"] == module_name[cam_index])
         calib["module_calibration"][cam_index]["vignetting"]["vignetting"][0]["vignetting"]["data"] = list(vig.reshape(-1))
         cam_index += 1
-    calib_str = json.dumps(calib)
-    fid = open(outfile, 'w')
-    fid.write(calib_str)
-    fid.close()
+    strdata = json.dumps(calib, indent=2, cls=JSONSpecialEncoder)
+    with open(outfile, 'w') as f:
+        f.write(strdata.replace('"' + kstring, '').replace(kstring + '"', ''))

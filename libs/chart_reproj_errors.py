@@ -4,7 +4,7 @@ from matplotlib import pyplot as plt
 from libs.read_fst import load_fst
 
 
-module_name = ["A1", "A2", "A3", "A4"]
+module_name = ["A1", "A2", "A3", "A4", "A5", "A6"]
 
 
 def chart_mesh_grid(chart_shape=(44,19)):
@@ -57,8 +57,9 @@ def pproj(dirname, file_prefix, outdir_prefix, num_cams=4):
         plotreproj(dirname + "/" + file_prefix + str(cam) + ".fst", dirname + "/" + outdir_prefix + str(cam))
 
 
-def plot_view_errors_orientations(folder, title, prefix_rerror="reproj", prefix_rot="rotations", prefix_trans="translations"):
-    rerrors = collect_reprojection_errors(folder, prefix_rerror)[:, :, :, 2:]
+def plot_view_errors_orientations(folder, title, num_cams = 6,
+        prefix_rerror="rerror", prefix_rot="chart_rotations", prefix_trans="chart_translation"):
+    rerrors = collect_reprojection_errors(folder, prefix_rerror, num_cams)[:, :, :, 2:]
     verrs = np.average(np.linalg.norm(rerrors, axis=3), axis=2)
     max_verrs = np.max(verrs, axis=1)
     rotations = np.linalg.norm(collect_rotations(folder, prefix_rot), axis=1)
@@ -76,21 +77,28 @@ def plot_view_errors_orientations(folder, title, prefix_rerror="reproj", prefix_
         axes[pindex].plot(translations, label="translations")
         axes[pindex].set_title("Max error: {:.2f}".format(max_verrs[cam]))
         axes[pindex].legend()
-    fig.suptitle("{} - max rotation(degrees): {:.2f}, max translation: {:.2f}".format(title, max_rot, max_trans))
+    fig.suptitle("{} - max rotation(degrees): {:.2f}, max translation: {:.2f}".format(title, max_rot * 180. / np.pi, max_trans))
     return fig
 
 
 def compare_view_errors(rerrors, labels, title, metric="max"):
     num_cams = rerrors[0].shape[0]
-    fig, axes = plt.subplots(2, int((num_cams + 1)/2), figsize=(12, 8))
+    fig, axes = plt.subplots(2, int((num_cams + 1)/2), figsize=(24, 16))
     for cam in range(num_cams):
         pindex = np.unravel_index(cam, axes.shape)
+        max_val = 0.
+        min_val = 100.
         for ir in range(len(rerrors)):
             r = rerrors[ir][cam, :, :, 2:]
             if metric == "max":
-                axes[pindex].plot(np.max(np.linalg.norm(r, axis=2), axis=1), label=labels[ir])
+                values = np.max(np.linalg.norm(r, axis=2), axis=1)
+                axes[pindex].plot(values, label=labels[ir])
             else:
-                axes[pindex].plot(np.average(np.linalg.norm(r, axis=2), axis=1), label=labels[ir])
+                values = np.average(np.linalg.norm(r, axis=2), axis=1)
+                axes[pindex].plot(values, label=labels[ir])
+            max_val = max(max_val, np.max(values))
+            min_val = min(min_val, np.min(np.where(values == 0., 100., values)))
+        axes[pindex].set_ylim(min_val, max_val)
         axes[pindex].legend()
         axes[pindex].set_title(title + " for camera {}".format(module_name[cam]))
     return fig
@@ -139,18 +147,18 @@ def get_valid_points(reproj_errors):
     return valid
 
 
-def plot_reprojection_errors(folder, file_prefix, chart_shape=(44, 19)):
-    reproj_errors = collect_reprojection_errors(folder, file_prefix)
+def plot_reprojection_errors(folder, file_prefix, num_cams = 6, chart_shape=(44, 19)):
+    reproj_errors = collect_reprojection_errors(folder, file_prefix, num_cams)
     valid = get_valid_points(reproj_errors)
     cam_index = 0
     fig1, together = plt.subplots()
-    fig2, axes = plt.subplots(2, 4, figsize=(24, 8))
+    fig2, axes = plt.subplots(2, num_camsi, figsize=(24, 8))
     for cam_errors in valid:
         nerrors = np.average(np.linalg.norm(cam_errors, axis=2), axis=0)
         index = np.argmax(nerrors)
         corner = np.unravel_index(index, chart_shape)
         max_error = nerrors[index]
-        together.plot(nerrors)
+        together.plot(nerrors, label=module_name[cam_index])
         x = np.arange(0, chart_shape[1], 1)
         y = np.arange(0, chart_shape[0], 1)
         xx, yy = np.meshgrid(x, y)
@@ -167,13 +175,14 @@ def plot_reprojection_errors(folder, file_prefix, chart_shape=(44, 19)):
             "Average for camera {}, chart error: {:.2E}, {:.2E}".format(
                 cam_index, np.average(xerrors), np.average(yerrors)))
         cam_index += 1
+    together.legend()
     fig1.suptitle(folder)
     fig2.suptitle(folder)
     fig1.savefig(folder + "/linear_plot.png")
     fig2.savefig(folder + "/quiver_scatter.png")
 
 
-def plot_chart_deviations(folder, short_title, filename="chart.fst"):
+def plot_chart_deviations(folder, short_title, filename="chart_warp.fst"):
     chart = load_fst(os.path.join(folder, filename))
     orig = chart[:, :2]
     error = chart[:, 2:]
@@ -183,10 +192,11 @@ def plot_chart_deviations(folder, short_title, filename="chart.fst"):
     plt.title(short_title)
     plt.savefig(os.path.join(folder, short_title + "_chart.png"))
     plt.close()
+    return orig, error
 
 
 def view_errors(folders, labels, title="Max view errors", metric="max"):
-    prefix = "reproj"
+    prefix = "rerror"
     rerrors = list()
     for f in folders:
         rerrors.append(collect_reprojection_errors(f, prefix))
