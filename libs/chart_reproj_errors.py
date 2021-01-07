@@ -201,3 +201,20 @@ def view_errors(folders, labels, title="Max view errors", metric="max"):
     for f in folders:
         rerrors.append(collect_reprojection_errors(f, prefix))
     return compare_view_errors(rerrors, labels, title, metric)
+if __name__ == '__main__':
+    folders = [
+        "/private/var/tmp/_bazel_amaharshi/aae9a32f0141f2a5e66845f0e8402a0f/execroot/co_light_cp/bazel-out/darwin-opt/bin/depthperc/inirenderer/unittest/factorycalibration_test.runfiles/co_light_cp"
+    ]
+    labels = [
+        "extrinsics01"
+    ]
+
+    for f, title in zip(folders, labels):
+         num_cams = 6
+         prefix = "rerror"
+         plot_reprojection_errors(f, prefix, num_cams)
+         #pproj(f, "rerror", "quiver", 1)
+         plot_chart_deviations(f, title)
+         rerrors = collect_reprojection_errors(f, prefix, num_cams)
+         plot_view_errors(rerrors, title).savefig(f + "/view_errors.png")
+

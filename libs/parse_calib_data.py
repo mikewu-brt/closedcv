@@ -81,7 +81,7 @@ def parse_lightheader_all(filename, num_cams=4):
     header = read_lightheader(filename)
 
     for cam in range(num_cams):
-        K[cam], R[cam], T[cam], D[cam] = parse_light_header(header, cam)
+        K[cam], R[cam], T[cam], D[cam] = parse_geometric(header, cam)
 
     return K, R, T, D
 
@@ -185,7 +185,7 @@ def format_json(infile, outfile):
         f.write(strdata.replace('"' + kstring, '').replace(kstring + '"', ''))
 
 def convert_vignetting(npy_folder, infile, outfile):
-    module_name = ["A1", "A2", "A3", "A4"]
+    module_name = ["A1", "A2", "A3"]
     calib = json.load(open(infile, 'r'))
     npy_prefix = "lens_shading_"
     cam_index = 0

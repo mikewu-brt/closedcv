@@ -29,8 +29,8 @@ plt.figure(1)
 ####################
 
 parser = argparse.ArgumentParser(description="Stereo Calibrate 2")
-parser.add_argument('--image_dir', default='Calibration_Aug23')
-parser.add_argument('--cal_dir', default='Calibration_Aug23')
+parser.add_argument('--image_dir', default='20201218')
+parser.add_argument('--cal_dir', default='20201218')
 parser.add_argument('--filter_size', type=int, default=65, help="Filters raw vignetting data using a 2D filter of filter_size by filter size")
 
 args, unknown = parser.parse_known_args()
@@ -80,7 +80,6 @@ while not all_files_read:
         cal_file_helper.save_np_file("lens_shading_{}".format(setupInfo.RigInfo.module_name[cam_idx]), img_new)
 
         img2 = cv2.resize(img, None, fx=display_size, fy=display_size)
-        cv2.imshow("{}".format(setupInfo.RigInfo.module_name[cam_idx]), img2)
         all_files_read = True
 
     if not all_files_read:
