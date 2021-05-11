@@ -146,7 +146,7 @@ class Image:
 
         return raw
 
-    def read_image_file(self, camera_idx, capture_idx, scale_to_8bit=True, raw_output=False, file_name = None ):
+    def read_image_file(self, camera_idx, capture_idx, black_level=0, scale_to_8bit=True, raw_output=False, file_name = None ):
         """
         Process raw image files into "Numpy" arrays.
 
@@ -191,6 +191,7 @@ class Image:
 
             # Reshape and demosaic
             raw = raw.reshape(self.__setup.SensorInfo.height, self.__setup.SensorInfo.width)
+            raw -= black_level
             if not self.__setup.RigInfo.left_justified:
                 raw <<= (16 - self.__setup.SensorInfo.bits_per_pixel)
 

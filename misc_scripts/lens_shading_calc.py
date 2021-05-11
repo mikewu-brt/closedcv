@@ -29,9 +29,10 @@ plt.figure(1)
 ####################
 
 parser = argparse.ArgumentParser(description="Stereo Calibrate 2")
-parser.add_argument('--image_dir', default='20201218')
-parser.add_argument('--cal_dir', default='20201218')
-parser.add_argument('--filter_size', type=int, default=65, help="Filters raw vignetting data using a 2D filter of filter_size by filter size")
+parser.add_argument('--image_dir', default='A')
+parser.add_argument('--cal_dir', default='A')
+parser.add_argument('--black_level', type=int, default=240)
+parser.add_argument('--filter_size', type=int, default=33, help="Filters raw vignetting data using a 2D filter of filter_size by filter size")
 
 args, unknown = parser.parse_known_args()
 if unknown:
@@ -43,6 +44,7 @@ common_gain_flag = True  # compute the lens shading gain using gray image if tru
 image_helper = Image(args.image_dir)
 cal_file_helper = Image(args.cal_dir)
 display_size = image_helper.display_size(1024)
+black_level = args.black_level
 setupInfo = image_helper.setup_info()
 
 # Initialize smoothing filter
@@ -54,7 +56,7 @@ orientation = 0
 all_files_read = False
 while not all_files_read:
     for cam_idx in range(image_helper.num_cam()):
-        img, gray = image_helper.read_image_file(cam_idx, orientation, scale_to_8bit=False)
+        img, gray = image_helper.read_image_file(cam_idx, orientation, black_level=black_level, scale_to_8bit=False)
         if img is None:
             all_files_read = True
             break
@@ -70,16 +72,18 @@ while not all_files_read:
             img_new[:,:,1] = gain
             img_new[:,:,2] = gain
         else:
-            max_val_vec = np.max(img,axis=(0,1))
+            max_val_vec = 2.**16 #np.max(img,axis=(0,1))
             img_new = (1/img) * max_val_vec
             _, _, c = img_new.shape
             if args.filter_size > 0:
                 for i in range(c):
-                    img_new[:, :, i] = ndimage.convolve(img_new[:, :, i], k, 'nearest')
+                    gain = ndimage.convolve(img_new[:, :, i], k, mode='nearest')
+                    print(cam_idx, c, np.min(gain))
+                    gain = gain / np.min(gain)
+                    img_new[:, :, i] = gain
 
         cal_file_helper.save_np_file("lens_shading_{}".format(setupInfo.RigInfo.module_name[cam_idx]), img_new)
 
-        img2 = cv2.resize(img, None, fx=display_size, fy=display_size)
         all_files_read = True
 
     if not all_files_read:
