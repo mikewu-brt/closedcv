@@ -184,17 +184,23 @@ def format_json(infile, outfile):
     with open(outfile, 'w') as f:
         f.write(strdata.replace('"' + kstring, '').replace(kstring + '"', ''))
 
-def convert_vignetting(npy_folder, infile, outfile):
-    module_name = ["A1", "A2", "A3"]
+def convert_vignetting(npy_folder, infile, outfile, num_cams):
+    module_name = ["A1", "A2", "A3", "A4", "A5", "A6"]
+    module_name = module_name[:num_cams]
     calib = json.load(open(infile, 'r'))
+    assert(len(calib["module_calibration"]) == num_cams)
     npy_prefix = "lens_shading_"
     cam_index = 0
     for module in module_name:
         vig = np.load(npy_folder + "/" + npy_prefix+module_name[cam_index]+".npy")
-        vig = light_vignetting(vig, (17, 13))
+        shape = (int((vig.shape[1]+31)/32), int((vig.shape[0]+31)/32))
+        vig = light_vignetting(vig, shape)
         print(calib["module_calibration"][cam_index]["camera_id"])
         assert(calib["module_calibration"][cam_index]["camera_id"] == module_name[cam_index])
         calib["module_calibration"][cam_index]["vignetting"]["vignetting"][0]["vignetting"]["data"] = list(vig.reshape(-1))
+        calib["module_calibration"][cam_index]["vignetting"]["vignetting"][0]["vignetting"]["width"] = shape[0]
+        calib["module_calibration"][cam_index]["vignetting"]["vignetting"][0]["vignetting"]["height"] = shape[1]
+        calib["module_calibration"][cam_index]["vignetting"]["vignetting"][0]["vignetting"]["upsample_disable"] = True
         cam_index += 1
     strdata = json.dumps(calib, indent=2, cls=JSONSpecialEncoder)
     with open(outfile, 'w') as f:
