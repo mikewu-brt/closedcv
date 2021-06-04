@@ -4,3 +4,11 @@
 install
 *.deb
 xsens_read_ids/*.json
+venv/*
+fpga_test/*
+euclid/*.bak
+euclid/*.bin
+euclid/*.dat
+euclid/tests-images
+euclid/lt_protobuf
+euclid/lt_protobuf-old

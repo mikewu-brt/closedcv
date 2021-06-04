@@ -6,7 +6,7 @@
 #
 #  @author  yhussain
 #  @version V1.0.0
-#  @date    Sept 2020
+#  @date    Sept 2020 May 2021
 #  @brief
 #
 
@@ -28,10 +28,10 @@ from bitmap import BitMap
 
 from uint_to_log2 import *
 from compress import *
-#from pma_types import *
 from drf_types import *
-from pma_types import *
+from baseline_pma_types import *
 from drfv2_types import *
+from drfv3_types import *
 import ctypes # YH TODO: need to remove this as drf_types already has it
 
 class Pmax_v34:
@@ -374,7 +374,8 @@ class Pmax_v34:
                 bm = bm.fromstring(str[2::])
                 for idx in range(len(bm.nonzero())):
                     val_1D = val[0] * 32 + bm.nonzero()[idx]
-                    output_loc.append([val_1D//64 - (self.__arr_parm_list[index]['patchY']-1), val_1D%64 - (self.__arr_parm_list[index]['patchX']-1)])
+#                    output_loc.append([val_1D//64 - (self.__arr_parm_list[index]['patchY']-1), val_1D%64 - (self.__arr_parm_list[index]['patchX']-1)])
+                    output_loc.append([val_1D//32 - (self.__arr_parm_list[index]['patchY']-1), val_1D%32 - (self.__arr_parm_list[index]['patchX']-1)])
 
         print(output_loc)
         self.__arr_parm_list[index]['ggmap_output_loc'] = np.asarray(output_loc, dtype=np.int32 ).reshape((self.__arr_parm_list[index]['nresY'], self.__arr_parm_list[index]['nresX'],2))
@@ -422,7 +423,7 @@ class Pmax_v34:
                         patch_pma_config = \
                             test_case.test_setup[0].pma_pass_configuration[pma_pass_idx].pma_pass_parameters[
                                 current_pass_num].patch_pma_config
-                        timing_sel = plane_command_list[current_pass_num].params[index].patch_timing_sel
+                        timing_sel = plane_command_list[current_pass_num].params[index].mv_patch_timing_sel
                         pma_patch_configuration = test_case.test_setup[0].pma_patch_configuration[patch_pma_config[timing_sel]]
                         index_new = current_pass_num * self.max_num_planes() + index
                         #[drf_scores, depth_arr] = self.dscan(ref_mem, src_1x, sx, rx, index_new, dscan_method)
@@ -863,16 +864,19 @@ class Pmax_v34:
                             if print_logs:
                                 print("", file=fp_file)
                                 print("best score = {}".format(
-                                    drf_scores_tmp[ny, nx]//4), file=fp_file)   # divided by 4 to match 8 bit hardware output
-                                    #drf_scores_tmp[ny, nx]), file=fp_file)   # divided by 4 to match 8 bit hardware output
+                                    #drf_scores_tmp[ny, nx]//4), file=fp_file)   # divided by 4 to match 8 bit hardware output
+                                    drf_scores_tmp[ny, nx]), file=fp_file)   # divided by 4 to match 8 bit hardware output
                                 print("best score k index = {}".format(depth_arr_tmp[ny, nx]), file=fp_file)
 
                                 print("best score plane index  = {}".format( plane_arr_tmp[ny, nx] + start_plane - num_planes), file=fp_file)
                                 if version == 1:
                                     log_drf(list_drf[print_idx], fp_file, rtl_best_score_arr[current_pass_cnt], rtl_depth_arr[current_pass_cnt], rtl_plane_arr[current_pass_cnt])
-                                else:
+                                elif version == 2:
                                     log_drf_v2(list_drf[print_idx], fp_file, rtl_best_score_arr[tmp_index],
                                            rtl_depth_arr[tmp_index], rtl_plane_arr[tmp_index])
+                                elif version == 3:
+                                    log_drf_v3(list_drf[print_idx], fp_file, rtl_best_score_arr[tmp_index],
+                                               rtl_depth_arr[tmp_index], rtl_plane_arr[tmp_index])
                                 print("", file=fp_file)
                                 print("", file=fp_file)
                                 print_idx = print_idx + 1
@@ -953,7 +957,7 @@ class Pmax_v34:
         if merge_green_flag:
             assert C == 4
             img_ref_4x = np.empty((imgY, imgX * ovrsX, C), dtype=np.float64)
-            image_ref_pq = np.empty((imgY, imgX, C))
+            image_ref_pq = np.empty((imgY, imgX, C), dtype=np.uint32)
             image_src_pq = np.empty((imgY, imgX, C))
             if image_type != "mode_4":
                 if four_channel_flag:
@@ -967,20 +971,24 @@ class Pmax_v34:
                     image_src_pq[:, :, 2] = image_src_pq[:, :, 1]
                     image_src_pq[:, :, 3] = img_a2[1::2, 1::2] // 16
                 else:
-                    image_ref_pq[:, :, 0] = (img_a1[::2, 1::2] + img_a1[1::2, ::2]) // 2
+                    #image_ref_pq[:, :, 0] = (img_a1[::2, 1::2] + img_a1[1::2, ::2]) // 2
+                    image_ref_pq[:, :, 0] = img_a1[::2, 1::2]
+                    image_ref_pq[:,:,0] = image_ref_pq[:,:,0] +  img_a1[1::2, ::2]
+                    image_ref_pq[:,:,0] = np.round(image_ref_pq[:,:,0]/2.0)
+
                     image_ref_pq[:, :, 1] = img_a1[::2, ::2]
                     image_ref_pq[:, :, 2] = img_a1[1::2, 1::2]
                     image_ref_pq[:, :, 3] = 0
 
-                    image_src_pq[:, :, 0] =  (img_a2[::2, 1::2] // 16 + img_a2[1::2, ::2] // 16) // 2
-                    image_src_pq[:, :, 1] = img_a2[::2, ::2] // 16
-                    image_src_pq[:, :, 2] = img_a2[1::2, 1::2] // 16
+                    image_src_pq[:, :, 0] =  np.round((np.round(img_a2[::2, 1::2] / 16.0) + np.round(img_a2[1::2, ::2] / 16.0)) / 2.0)
+                    image_src_pq[:, :, 1] = np.round(img_a2[::2, ::2] / 16.0)
+                    image_src_pq[:, :, 2] = np.round(img_a2[1::2, 1::2] / 16.0)
                     image_src_pq[:, :, 3] = 0
 
-                img_ref_4x[:, ::4, :] = image_ref_pq // 16
-                img_ref_4x[:, 1:-4:4, :] = (image_ref_pq[:, :-1, :] * .75 + .25 * image_ref_pq[:, 1::, :]) // 16
-                img_ref_4x[:, 2:-4:4, :] = (image_ref_pq[:, :-1, :] * .5 + .5 * image_ref_pq[:, 1::, :]) // 16
-                img_ref_4x[:, 3:-4:4, :] = (image_ref_pq[:, :-1, :] * .25 + .75 * image_ref_pq[:, 1::, :]) // 16
+                img_ref_4x[:, ::4, :] = np.round(image_ref_pq / 16.0)
+                img_ref_4x[:, 1:-4:4, :] = np.round((image_ref_pq[:, :-1, :] * .75 + .25 * image_ref_pq[:, 1::, :]) / 16.0)
+                img_ref_4x[:, 2:-4:4, :] = np.round((image_ref_pq[:, :-1, :] * .5 + .5 * image_ref_pq[:, 1::, :]) / 16.0)
+                img_ref_4x[:, 3:-4:4, :] = np.round((image_ref_pq[:, :-1, :] * .25 + .75 * image_ref_pq[:, 1::, :]) / 16.0)
 
             else:
                 if four_channel_flag:
@@ -1049,6 +1057,7 @@ parser.add_argument('--dscan_method', default='method_1', help='method_1: comput
                     method_4: used for debug only. Implements delya line and dense map and all scores can be loooked at here for debug')
 parser.add_argument('--log_file', default="pmax_model_out_dbg_tmp.txt")
 parser.add_argument('--drf_version', type=int, default=1)
+parser.add_argument('--num_dscans_per_escan_rtl', type=int, default=77)
 
 args, unknown = parser.parse_known_args()
 if unknown:
@@ -1153,7 +1162,7 @@ for current_pass_num in range(num_passes):
     #print(script_path," ", script_args)
     if script_path != '':
         for script_args_index in range(len(script_args)):
-            system_command = 'python3 ' + script_path + script_args[script_args_index]
+            system_command = 'python3 ' + script_path + script_args[script_args_index] + '--json ' + args.json + ' --test_name ' + args.test_name + ' --index 0'
             print(system_command)
             os.system(system_command)
 
@@ -1161,14 +1170,14 @@ for current_pass_num in range(num_passes):
 
 
     infile = open(filename, "rb")
-    plane_command_list.append(unpack(PLANE_CONFIGURATION_COMMAND_T, infile.read()))
+    plane_command_list.append(unpack(BL_PLANE_CONFIGURATION_COMMAND_T, infile.read()))
     infile.close()
 
     for index in range(plane_command_list[current_pass_num].num_planes):
         patch_pma_config = \
             test_case.test_setup[0].pma_pass_configuration[pma_pass_idx].pma_pass_parameters[
                 current_pass_num].patch_pma_config
-        timing_sel = plane_command_list[current_pass_num].params[index].patch_timing_sel
+        timing_sel = plane_command_list[current_pass_num].params[index].mv_patch_timing_sel
         pmax_v34.inc_num_planes(current_pass_num, timing_sel)
         pma_patch_configuration = test_case.test_setup[0].pma_patch_configuration[patch_pma_config[timing_sel]]
         pmax_v34.set_max_disparity( current_pass_num*pmax_v34.max_num_planes() + index, max_disparity_selected)
@@ -1215,6 +1224,44 @@ if args.drf_version == 2:
     print("")
 
     print("drf_len = {}".format(len(drf)))
+if args.drf_version == 3:
+    print("Reading {}".format(drf_filename))
+    drf = []
+    p = 0
+    num_drf = 0
+    num_drf_in_pass = (pmax_v34.jumpX(p)//pmax_v34.stepX(p)) * (pmax_v34.jumpY(p)//pmax_v34.stepY(p))
+    toggle_flag = False
+    while True:
+        elem = drf_infile.read(ctypes.sizeof(DRF_V3_OUTPUT_T))
+        if elem == b'':
+            break
+        elem = unpack(DRF_V3_OUTPUT_T, elem)
+        if num_drf == 0:
+            drf.append([])
+        drf[-1].append(elem)
+        num_drf += 1
+
+        # Check to advance pass
+        if num_drf == num_drf_in_pass:
+            num_drf = 0
+            if pmax_v34.num_planes(p, 1) == 0:
+                p += 1
+                toggle_flag = False
+            elif toggle_flag == False:
+                toggle_flag = True
+            elif toggle_flag == True:
+                p += 1
+                toggle_flag = False
+            if p == num_pass_timings:
+                p = 0
+
+            num_drf_in_pass = (pmax_v34.jumpX(p*pmax_v34.max_num_planes())//pmax_v34.stepX(p*pmax_v34.max_num_planes())) * (pmax_v34.jumpY(p*pmax_v34.max_num_planes())//pmax_v34.stepY(p*pmax_v34.max_num_planes()))
+
+    drf_infile.close()
+    print("Done")
+    print("")
+
+    print("drf_len = {}".format(len(drf)))
 
 current_pass_num = 0 # normally will loop over num_passes
 drf_simple = [[] for _ in range(pmax_v34.num_passes())]
@@ -1230,6 +1277,8 @@ img_src_1x_strip = np.zeros((rmemY,imgX,C), dtype=np.uint64)
 
 
 dscans_per_escan = floor((imgX - plane_command_list[0].ref_patch_offset_q2 / pmax_v34.ovrsX(0)  + pmax_v34.NEGATIVE_DISPARITY_SLACK_PQ(0))/pmax_v34.jumpX(0))
+# for now pass the num_dscans_per_escan for Firmware/FPGA case via arg.
+dscans_per_escan_rtl = args.num_dscans_per_escan_rtl
 
 best_depth_arr = [[] for _ in range(pmax_v34.number_drf_sets())]
 best_plane_arr = [[] for _ in range(pmax_v34.number_drf_sets())]
@@ -1250,12 +1299,10 @@ for num_escans in range(imgY//jumpY):
             pmax_v34.escan(img_ref_4x_strip.copy(), img_src_1x_strip.copy(), 0,   plane_command_list,
                                              args.dscan_method, args.test_name, args.drf_version)
 
-
             print("done with escan for all planes and pass number: {} ".format(num_escans), file=fp_file)
             print("done with escan for all planes and pass number: {} ".format(num_escans))
 
-
-            drf_rtl_idx = drf_rtl_idx + dscans_per_escan
+            drf_rtl_idx = drf_rtl_idx + dscans_per_escan_rtl
 
 print("", file=fp_file)
 fp_file.close()
